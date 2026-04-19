@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<widget id="glico.customdndtasklist.CustomDnDTaskList" pluginWidget="true" needsEntityContext="true" offlineCapable="true"
+        supportedPlatform="Web"
+        xmlns="http://www.mendix.com/widget/1.0/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.mendix.com/widget/1.0/ ../node_modules/mendix/custom_widget.xsd">
+    <name>Custom DnD Task List</name>
+    <description>保全タスクの実行手順リスト。SortOrder 昇順表示、DnD で並べ替えて反映します。</description>
+    <icon/>
+    <properties>
+        <propertyGroup caption="データソース">
+            <systemProperty key="Editability" />
+            <property key="sections" type="datasource" isList="true" required="false">
+                <caption>セクション一覧</caption>
+                <description>表示順の Section リスト。タスクがまだ無いセクションも見出しとして表示されます。未設定時は従来どおりフラットなタスクリストのみです。</description>
+            </property>
+            <property key="sectionNameAttribute" type="attribute" dataSource="sections" required="false">
+                <caption>セクション名</caption>
+                <description>各セクション見出しに表示する文字列属性（未設定時はオブジェクト表示名にフォールバック）</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+            <property key="tasks" type="datasource" isList="true" required="true">
+                <caption>タスク一覧</caption>
+                <description>表示・並べ替えの対象となるタスクのリスト。</description>
+            </property>
+            <property key="taskSection" type="association" dataSource="tasks" selectableObjects="sections" required="false">
+                <caption>タスクの Section（参照）</caption>
+                <description>Tasks（N:1）→ Section の参照。セクション別表示に使用します（sections と併せて設定）。</description>
+                <associationTypes>
+                    <associationType name="Reference"/>
+                </associationTypes>
+            </property>
+            <property key="sortOrderAttribute" type="attribute" dataSource="tasks" required="true">
+                <caption>SortOrder</caption>
+                <description>並び順（昇順で表示。DnD 後に 1 から連番で上書き）</description>
+                <attributeTypes>
+                    <attributeType name="Integer"/>
+                    <attributeType name="Long"/>
+                </attributeTypes>
+            </property>
+            <property key="taskNameAttribute" type="attribute" dataSource="tasks" required="false">
+                <caption>タスク名</caption>
+                <description>行の主ラベル（未設定時はオブジェクト表示名にフォールバック）</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+            <property key="taskDescriptionAttribute" type="attribute" dataSource="tasks" required="false">
+                <caption>タスク説明</caption>
+                <description>補足テキスト（任意）</description>
+                <attributeTypes>
+                    <attributeType name="String"/>
+                </attributeTypes>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="表示">
+            <property key="descriptionMaxLines" type="integer" required="true" defaultValue="0">
+                <caption>説明の最大行数</caption>
+                <description>0 で行数制限なし。1 以上で CSS line-clamp を適用</description>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="行アクション">
+            <property key="onTaskDetail" type="action" dataSource="tasks" required="false">
+                <caption>詳細（行）</caption>
+                <description>行右の詳細アイコン押下時に実行するアクション。マイクロフロー／ナノフロー等を選び、**パラメータにその行のタスク**を渡してください。</description>
+            </property>
+            <property key="onTaskDelete" type="action" dataSource="tasks" required="false">
+                <caption>削除（行）</caption>
+                <description>行右の削除アイコン押下時に実行するアクション。マイクロフロー等で削除や確認ダイアログを行う場合、**パラメータにその行のタスク**を渡してください。</description>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="インライン追加（セクション）">
+            <property key="onInlineAddTask" type="action" dataSource="sections" required="false">
+                <caption>タスク追加（入力確定時）</caption>
+                <description>セクション別表示時のみ有効。各セクションのリスト末尾に「タスクを追加…」を表示し、タップ後にインライン入力できます。確定時（Enter または入力欄からフォーカスが外れたとき、空でなければ）に実行します。**パラメータにそのセクションのオブジェクト**を渡し、タスク名は変数 **newTaskTitle**（String）で渡します。タスクの作成・Section への関連付け・SortOrder の付与はこのアクション内で行ってください。</description>
+                <actionVariables>
+                    <actionVariable key="newTaskTitle" type="String" caption="入力したタスク名" />
+                </actionVariables>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="インライン編集（タスク）">
+            <property key="onTaskTitleCommitted" type="action" dataSource="tasks" required="false">
+                <caption>タスク名 確定後</caption>
+                <description>タスク名のインライン編集を確定したときに実行するマイクロフロー／ナノフロー（**データソースの文字列属性ではクライアントからの setValue が使えないため、保存にはここで Change object／Commit することを推奨**）。**パラメータにその行のタスク**を渡し、確定後の文字列を **newTitle**（String）で渡します。未設定でランタイムが setValue を許可する場合のみ、ウィジェットがタスク名属性に setValue を試みます。</description>
+                <actionVariables>
+                    <actionVariable key="newTitle" type="String" caption="確定したタスク名" />
+                </actionVariables>
+            </property>
+            <property key="onTaskDescriptionCommitted" type="action" dataSource="tasks" required="false">
+                <caption>タスク説明 確定後</caption>
+                <description>タスク説明のインライン編集を確定したときに実行するマイクロフロー／ナノフロー（**データソース属性では setValue が使えないため、保存はここで行うことを推奨**）。**パラメータにその行のタスク**を渡し、確定後の本文を **newDescription**（String）で渡します。未設定で setValue が許可される場合のみ、ウィジェットが説明属性に setValue を試みます。</description>
+                <actionVariables>
+                    <actionVariable key="newDescription" type="String" caption="確定した説明" />
+                </actionVariables>
+            </property>
+        </propertyGroup>
+        <propertyGroup caption="イベント">
+            <property key="onPersistSortOrder" type="action" required="false">
+                <caption>SortOrder の保存（DnD・推奨）</caption>
+                <description>タスクがリスト・データソース経由の場合、SortOrder への setValue ができないことがあります。そのときは本アクションで並びを保存してください。DnD で順序が確定した直後に実行されます。変数 **sortOrderPayload**（String）に、タスクごとに 1 行ずつ「オブジェクト ID」「タブ」「新しい SortOrder（1 始まりの整数）」を並べたテキストを渡します（例: 1 行目が先頭タスク）。未設定の場合は従来どおり各タスクの SortOrder に setValue します（ランタイムがサポートしている場合のみ）。</description>
+                <actionVariables>
+                    <actionVariable key="sortOrderPayload" type="String" caption="並び（IDと順の一覧）" />
+                </actionVariables>
+            </property>
+            <property key="onSortOrderChanged" type="action" required="false">
+                <caption>SortOrder 保存後</caption>
+                <description>並べ替え反映後に実行するオプションのアクション</description>
+            </property>
+        </propertyGroup>
+    </properties>
+</widget>

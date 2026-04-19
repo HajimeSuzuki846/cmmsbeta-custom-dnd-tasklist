@@ -1,0 +1,332 @@
+.widget-custom-dnd-tasklist {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 14px;
+    line-height: 1.4;
+    color: #2e3b4d;
+}
+
+.widget-custom-dnd-tasklist__loading,
+.widget-custom-dnd-tasklist__empty {
+    padding: 12px 8px;
+    color: #6b7b93;
+}
+
+.widget-custom-dnd-tasklist__hint {
+    margin: 0 0 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #5c2c0a;
+    background: #fff4e5;
+    border: 1px solid #f0c896;
+    border-radius: 8px;
+}
+
+.widget-custom-dnd-tasklist__sections {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.widget-custom-dnd-tasklist__section {
+    margin: 0;
+}
+
+.widget-custom-dnd-tasklist__section-title {
+    margin: 0 0 8px;
+    padding: 0 2px;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.3;
+    color: #1a2332;
+}
+
+.widget-custom-dnd-tasklist__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border: 1px solid #d4d9e2;
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.widget-custom-dnd-tasklist__list--nested {
+    min-height: 0;
+}
+
+/* タスク 0 件のセクションでも枠とわずかな余白を残す */
+.widget-custom-dnd-tasklist__list--nested:empty {
+    min-height: 12px;
+    background: #fafbfc;
+}
+
+.widget-custom-dnd-tasklist__row {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e8ecf2;
+}
+
+.widget-custom-dnd-tasklist__row:last-child {
+    border-bottom: none;
+}
+
+.widget-custom-dnd-tasklist__row--dragging {
+    background: #f3f6fb;
+}
+
+.widget-custom-dnd-tasklist__handle {
+    flex: 0 0 auto;
+    cursor: grab;
+    user-select: none;
+    -webkit-user-drag: element;
+    touch-action: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    min-height: 44px;
+    width: 36px;
+    color: #8a96ab;
+}
+
+.widget-custom-dnd-tasklist__handle:active {
+    cursor: grabbing;
+}
+
+.widget-custom-dnd-tasklist__handle--disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.widget-custom-dnd-tasklist__handle-icon {
+    font-size: 12px;
+    letter-spacing: -2px;
+}
+
+.widget-custom-dnd-tasklist__body {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.widget-custom-dnd-tasklist__title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.widget-custom-dnd-tasklist__title--editable {
+    cursor: pointer;
+    border-radius: 4px;
+    margin: -2px -4px;
+    padding: 2px 4px;
+}
+
+.widget-custom-dnd-tasklist__title--editable:hover {
+    background: #f0f3f8;
+}
+
+.widget-custom-dnd-tasklist__title--placeholder {
+    font-weight: 500;
+}
+
+.widget-custom-dnd-tasklist__muted-placeholder {
+    color: #8a96ab;
+    font-weight: 400;
+}
+
+.widget-custom-dnd-tasklist__description--editable {
+    cursor: pointer;
+    border-radius: 4px;
+    margin: -2px -4px;
+    padding: 2px 4px;
+}
+
+.widget-custom-dnd-tasklist__description--editable:hover {
+    background: #f0f3f8;
+}
+
+.widget-custom-dnd-tasklist__description--placeholder {
+    min-height: 1.35em;
+}
+
+.widget-custom-dnd-tasklist__inline-edit-input,
+.widget-custom-dnd-tasklist__inline-edit-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0 0 4px;
+    padding: 6px 8px;
+    border: 1px solid #c5cdd8;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    color: #2e3b4d;
+    background: #fff;
+}
+
+.widget-custom-dnd-tasklist__inline-edit-input:focus,
+.widget-custom-dnd-tasklist__inline-edit-textarea:focus {
+    outline: none;
+    border-color: #2e6bff;
+    box-shadow: 0 0 0 2px rgba(46, 107, 255, 0.2);
+}
+
+.widget-custom-dnd-tasklist__inline-edit-textarea {
+    resize: vertical;
+    min-height: 64px;
+    line-height: 1.45;
+}
+
+.widget-custom-dnd-tasklist__inline-edit-hint {
+    margin: 0 0 2px;
+    font-size: 11px;
+    color: #8a96ab;
+    line-height: 1.2;
+}
+
+.widget-custom-dnd-tasklist__description {
+    font-size: 13px;
+    color: #5c6a82;
+    white-space: pre-wrap;
+}
+
+.widget-custom-dnd-tasklist__description--clamped {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.widget-custom-dnd-tasklist__row-actions {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    margin-left: 4px;
+    min-height: 44px;
+}
+
+.widget-custom-dnd-tasklist__icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #5c6a82;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.widget-custom-dnd-tasklist__icon-btn:hover:not(:disabled) {
+    background: #eef1f6;
+    color: #2e3b4d;
+}
+
+.widget-custom-dnd-tasklist__icon-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.widget-custom-dnd-tasklist__icon-btn--danger {
+    color: #b42318;
+}
+
+.widget-custom-dnd-tasklist__icon-btn--danger:hover:not(:disabled) {
+    background: #fde8e8;
+    color: #8a1c12;
+}
+
+.widget-custom-dnd-tasklist--preview {
+    min-height: 72px;
+}
+
+.widget-custom-dnd-tasklist__visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.widget-custom-dnd-tasklist__row--add-trigger,
+.widget-custom-dnd-tasklist__row--inline-add {
+    border-top: 1px solid #e8ecf2;
+    border-bottom: none;
+}
+
+.widget-custom-dnd-tasklist__handle--placeholder {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.widget-custom-dnd-tasklist__body--add-trigger {
+    display: flex;
+    align-items: center;
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+
+.widget-custom-dnd-tasklist__add-trigger {
+    margin: 0;
+    padding: 6px 0;
+    border: none;
+    background: none;
+    font: inherit;
+    font-size: 14px;
+    color: #8a96ab;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.widget-custom-dnd-tasklist__add-trigger:hover:not(:disabled) {
+    color: #2e6bff;
+    text-decoration: underline;
+}
+
+.widget-custom-dnd-tasklist__add-trigger:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.widget-custom-dnd-tasklist__body--inline-add {
+    display: flex;
+    align-items: center;
+    min-height: 44px;
+}
+
+.widget-custom-dnd-tasklist__inline-add-input {
+    width: 100%;
+    box-sizing: border-box;
+    margin: 0;
+    padding: 8px 10px;
+    border: 1px solid #c5cdd8;
+    border-radius: 6px;
+    font: inherit;
+    font-size: 14px;
+    color: #2e3b4d;
+    background: #fff;
+}
+
+.widget-custom-dnd-tasklist__inline-add-input:focus {
+    outline: none;
+    border-color: #2e6bff;
+    box-shadow: 0 0 0 2px rgba(46, 107, 255, 0.2);
+}
+
+.widget-custom-dnd-tasklist__inline-add-input:disabled {
+    opacity: 0.6;
+    cursor: wait;
+}
