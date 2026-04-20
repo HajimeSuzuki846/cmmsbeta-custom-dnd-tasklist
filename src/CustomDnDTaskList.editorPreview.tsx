@@ -69,6 +69,11 @@ export function preview(_props: CustomDnDTaskListPreviewProps): ReactElement {
                     </ul>
                 </section>
             </div>
+            <div className="widget-custom-dnd-tasklist__section-add">
+                <button type="button" className="widget-custom-dnd-tasklist__add-trigger" disabled>
+                    セクションを追加…
+                </button>
+            </div>
         </div>
     );
 }

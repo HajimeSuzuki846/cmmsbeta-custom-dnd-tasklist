@@ -19,12 +19,17 @@ export interface CustomDnDTaskListContainerProps {
     sortOrderAttribute: ListAttributeValue<Big>;
     taskNameAttribute?: ListAttributeValue<string>;
     taskDescriptionAttribute?: ListAttributeValue<string>;
+    taskCheckedAttribute?: ListAttributeValue<boolean>;
     descriptionMaxLines: number;
+    checkMode: boolean;
     onTaskDetail?: ListActionValue;
     onTaskDelete?: ListActionValue;
     onInlineAddTask?: ListActionValue<{ newTaskTitle: Option<string> }>;
+    onInlineAddSection?: ActionValue<{ newSectionTitle: Option<string> }>;
     onTaskTitleCommitted?: ListActionValue<{ newTitle: Option<string> }>;
     onTaskDescriptionCommitted?: ListActionValue<{ newDescription: Option<string> }>;
+    onSectionTitleCommitted?: ListActionValue<{ newTitle: Option<string> }>;
+    onTaskCheckedCommitted?: ListActionValue<{ newChecked: Option<boolean> }>;
     onPersistSortOrder?: ActionValue<{ sortOrderPayload: Option<string> }>;
     onSortOrderChanged?: ActionValue;
 }
@@ -47,12 +52,17 @@ export interface CustomDnDTaskListPreviewProps {
     sortOrderAttribute: string;
     taskNameAttribute: string;
     taskDescriptionAttribute: string;
+    taskCheckedAttribute: string;
     descriptionMaxLines: number | null;
+    checkMode: boolean;
     onTaskDetail: {} | null;
     onTaskDelete: {} | null;
     onInlineAddTask: {} | null;
+    onInlineAddSection: {} | null;
     onTaskTitleCommitted: {} | null;
     onTaskDescriptionCommitted: {} | null;
+    onSectionTitleCommitted: {} | null;
+    onTaskCheckedCommitted: {} | null;
     onPersistSortOrder: {} | null;
     onSortOrderChanged: {} | null;
 }

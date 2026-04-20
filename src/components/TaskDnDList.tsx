@@ -1,4 +1,16 @@
-import { type DragEvent, type ReactNode, ReactElement, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+    type DragEvent,
+    type KeyboardEvent,
+    type ChangeEvent,
+    type PointerEvent as ReactPointerEvent,
+    type ReactNode,
+    ReactElement,
+    useCallback,
+    useEffect,
+    useMemo,
+    useRef,
+    useState
+} from "react";
 import classNames from "classnames";
 import Big from "big.js";
 import { ObjectItem, ValueStatus } from "mendix";
@@ -6,6 +18,7 @@ import { CustomDnDTaskListContainerProps } from "../../typings/CustomDnDTaskList
 import { TaskRowActionIcons } from "./TaskRowActionIcons";
 import { SectionInlineTaskAdd } from "./SectionInlineTaskAdd";
 import { TaskRowEditableBody, type InlineEditField } from "./TaskRowEditableBody";
+import { InlineAddSection } from "./InlineAddSection";
 
 const ORPHAN_SECTION_KEY = "__orphan__";
 
@@ -129,24 +142,33 @@ function buildTaskGroups(
 }
 
 export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElement {
+    // Some editor/tsserver setups may lag behind XML→typings regeneration; keep this cast to avoid false-positive diagnostics.
+    const typedProps = props as CustomDnDTaskListContainerProps & { onInlineAddSection?: any };
+
     const {
         name,
         class: className,
         sections,
+        sectionNameAttribute,
         tasks,
         taskSection,
         sortOrderAttribute,
         taskNameAttribute,
         taskDescriptionAttribute,
         descriptionMaxLines,
+        checkMode,
+        taskCheckedAttribute,
         onTaskDetail,
         onTaskDelete,
         onInlineAddTask,
+        onInlineAddSection,
+        onTaskCheckedCommitted,
         onTaskTitleCommitted,
         onTaskDescriptionCommitted,
+        onSectionTitleCommitted,
         onPersistSortOrder,
         onSortOrderChanged
-    } = props;
+    } = typedProps;
 
     const widgetReadOnly = (props as { readOnly?: boolean }).readOnly;
 
@@ -159,10 +181,16 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
     const [inlineAddDraft, setInlineAddDraft] = useState("");
     const [inlineEditKey, setInlineEditKey] = useState<string | null>(null);
     const [inlineEditDraft, setInlineEditDraft] = useState("");
+    const [inlineSectionEditKey, setInlineSectionEditKey] = useState<string | null>(null);
+    const [inlineSectionEditDraft, setInlineSectionEditDraft] = useState("");
+    const [inlineAddSectionExpanded, setInlineAddSectionExpanded] = useState(false);
+    const [inlineAddSectionDraft, setInlineAddSectionDraft] = useState("");
 
     const widgetRootRef = useRef<HTMLDivElement | null>(null);
     const suppressInputBlurCommitRef = useRef(false);
     const blurSuppressResetTimerRef = useRef<number | undefined>(undefined);
+    const sectionTitleInputRef = useRef<HTMLInputElement | null>(null);
+    const skipSectionBlurCommitRef = useRef(false);
     const setWidgetRootEl = useCallback((el: HTMLDivElement | null) => {
         widgetRootRef.current = el;
     }, []);
@@ -199,6 +227,9 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
     const allTaskItems = useMemo(() => tasks.items ?? [], [tasks]);
 
     const inlineEditHint: ReactNode = useMemo(() => {
+        if (checkMode) {
+            return null;
+        }
         if (widgetReadOnly === true) {
             return (
                 <p className="widget-custom-dnd-tasklist__hint">
@@ -207,7 +238,28 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             );
         }
         return null;
-    }, [widgetReadOnly]);
+    }, [checkMode, widgetReadOnly]);
+
+    const checkModeHint: ReactNode = useMemo(() => {
+        if (!checkMode) {
+            return null;
+        }
+        if (!taskCheckedAttribute) {
+            return (
+                <p className="widget-custom-dnd-tasklist__hint">
+                    チェックモードが有効ですが、「チェック状態（Boolean）」が未設定です。Widget 設定で Tasks の Boolean 属性を割り当ててください。
+                </p>
+            );
+        }
+        if (widgetReadOnly !== true && !onTaskCheckedCommitted) {
+            return (
+                <p className="widget-custom-dnd-tasklist__hint">
+                    チェックモードの保存には「チェック状態 確定後（onTaskCheckedCommitted）」の設定を推奨します（リストデータソース属性は setValue が未対応の場合があります）。
+                </p>
+            );
+        }
+        return null;
+    }, [checkMode, onTaskCheckedCommitted, taskCheckedAttribute, widgetReadOnly]);
 
     const sortOrderStatesAll = useMemo(
         () => allTaskItems.map(it => sortOrderAttribute.get(it)),
@@ -249,17 +301,17 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                 if (persistAct.isExecuting) {
                     return;
                 }
-                if (!persistAct.canExecute) {
-                    console.warn(
-                        "CustomDnDTaskList: onPersistSortOrder.canExecute is false (e.g. editability or MF parameters). Attempting execute anyway; if nothing runs, fix the action in Studio."
-                    );
+                if (persistAct.canExecute) {
+                    persistAct.execute({ sortOrderPayload: serializeSortOrderPayload(reordered) });
+                    window.setTimeout(() => {
+                        tasks.reload();
+                        onSortOrderChanged?.execute();
+                    }, 0);
+                    return;
                 }
-                persistAct.execute({ sortOrderPayload: serializeSortOrderPayload(reordered) });
-                window.setTimeout(() => {
-                    tasks.reload();
-                    onSortOrderChanged?.execute();
-                }, 0);
-                return;
+                console.warn(
+                    "CustomDnDTaskList: onPersistSortOrder.canExecute is false (e.g. editability or MF parameters). Falling back to client-side setValue; if this fails, fix the action in Studio."
+                );
             }
             try {
                 for (let i = 0; i < reordered.length; i++) {
@@ -292,17 +344,17 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                 if (persistAct.isExecuting) {
                     return;
                 }
-                if (!persistAct.canExecute) {
-                    console.warn(
-                        "CustomDnDTaskList: onPersistSortOrder.canExecute is false (e.g. editability or MF parameters). Attempting execute anyway; if nothing runs, fix the action in Studio."
-                    );
+                if (persistAct.canExecute) {
+                    persistAct.execute({ sortOrderPayload: serializeSortOrderPayload(reorderedInSection) });
+                    window.setTimeout(() => {
+                        tasks.reload();
+                        onSortOrderChanged?.execute();
+                    }, 0);
+                    return;
                 }
-                persistAct.execute({ sortOrderPayload: serializeSortOrderPayload(reorderedInSection) });
-                window.setTimeout(() => {
-                    tasks.reload();
-                    onSortOrderChanged?.execute();
-                }, 0);
-                return;
+                console.warn(
+                    "CustomDnDTaskList: onPersistSortOrder.canExecute is false (e.g. editability or MF parameters). Falling back to client-side setValue; if this fails, fix the action in Studio."
+                );
             }
             try {
                 for (let i = 0; i < reorderedInSection.length; i++) {
@@ -339,6 +391,22 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             tasks.reload();
         },
         [onInlineAddTask, tasks]
+    );
+
+    const handleInlineAddSectionCommit = useCallback(
+        (title: string) => {
+            if (!onInlineAddSection) {
+                return;
+            }
+            if (!onInlineAddSection.canExecute || onInlineAddSection.isExecuting) {
+                return;
+            }
+            onInlineAddSection.execute({ newSectionTitle: title });
+            setInlineAddSectionExpanded(false);
+            setInlineAddSectionDraft("");
+            sections?.reload();
+        },
+        [onInlineAddSection, sections]
     );
 
     const handleBeginInlineEdit = useCallback((item: ObjectItem, field: InlineEditField, initialDraft: string) => {
@@ -395,13 +463,67 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         setInlineEditDraft("");
     }, []);
 
+    const handleBeginSectionInlineEdit = useCallback((sectionItem: ObjectItem, initialDraft: string) => {
+        setInlineSectionEditKey(sectionItem.id);
+        setInlineSectionEditDraft(initialDraft);
+    }, []);
+
+    const handleSectionTitleCommit = useCallback(
+        (sectionItem: ObjectItem, draft: string) => {
+            if (!sectionNameAttribute) {
+                setInlineSectionEditKey(null);
+                setInlineSectionEditDraft("");
+                return;
+            }
+
+            const act = onSectionTitleCommitted?.get(sectionItem);
+            if (act?.canExecute && !act.isExecuting) {
+                act.execute({ newTitle: draft });
+            } else {
+                const ev = sectionNameAttribute.get(sectionItem);
+                if (ev.status === ValueStatus.Available) {
+                    try {
+                        ev.setValue(draft);
+                    } catch (e) {
+                        console.warn(
+                            "CustomDnDTaskList: section title setValue is not supported for this attribute; configure onSectionTitleCommitted.",
+                            e
+                        );
+                    }
+                }
+            }
+
+            setInlineSectionEditKey(null);
+            setInlineSectionEditDraft("");
+            sections?.reload();
+        },
+        [onSectionTitleCommitted, sectionNameAttribute, sections]
+    );
+
+    const handleSectionTitleCancel = useCallback(() => {
+        setInlineSectionEditKey(null);
+        setInlineSectionEditDraft("");
+    }, []);
+
     const collapseInlineAdd = useCallback(() => {
         setInlineAddSectionKey(null);
         setInlineAddDraft("");
     }, []);
 
+    const collapseInlineAddSection = useCallback(() => {
+        setInlineAddSectionExpanded(false);
+        setInlineAddSectionDraft("");
+    }, []);
+
     useEffect(() => {
-        const listening = inlineEditKey != null || inlineAddSectionKey != null;
+        if (checkMode) {
+            return;
+        }
+        const listening =
+            inlineEditKey != null ||
+            inlineAddSectionKey != null ||
+            inlineSectionEditKey != null ||
+            inlineAddSectionExpanded;
         if (!listening) {
             return;
         }
@@ -431,6 +553,14 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                         setInlineEditDraft("");
                     }
                 }
+            } else if (inlineSectionEditKey != null) {
+                const sec = (sections?.items ?? []).find(s => s.id === inlineSectionEditKey);
+                if (sec) {
+                    handleSectionTitleCommit(sec, inlineSectionEditDraft);
+                } else {
+                    setInlineSectionEditKey(null);
+                    setInlineSectionEditDraft("");
+                }
             } else if (inlineAddSectionKey != null && onInlineAddTask) {
                 const group = taskGroups.find(g => g.sectionKey === inlineAddSectionKey);
                 const sectionItem = group?.sectionItem;
@@ -447,6 +577,13 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                     }
                 } else {
                     collapseInlineAdd();
+                }
+            } else if (inlineAddSectionExpanded && onInlineAddSection) {
+                const trimmed = inlineAddSectionDraft.trim();
+                if (trimmed !== "") {
+                    handleInlineAddSectionCommit(trimmed);
+                } else {
+                    collapseInlineAddSection();
                 }
             }
 
@@ -469,19 +606,32 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         };
     }, [
         collapseInlineAdd,
+        collapseInlineAddSection,
         handleInlineAddCommit,
+        handleInlineAddSectionCommit,
         handleInlineFieldCommit,
+        handleSectionTitleCommit,
         inlineAddDraft,
         inlineAddSectionKey,
+        inlineAddSectionDraft,
+        inlineAddSectionExpanded,
         inlineEditDraft,
         inlineEditKey,
+        inlineSectionEditDraft,
+        inlineSectionEditKey,
         onInlineAddTask,
+        onInlineAddSection,
+        sections,
         taskGroups,
         tasks
     ]);
 
     const onDragStart = useCallback(
         (item: ObjectItem) => (e: DragEvent) => {
+            if (checkMode) {
+                e.preventDefault();
+                return;
+            }
             const allow = grouped ? canReorderGrouped : canReorderFlat;
             if (!allow) {
                 e.preventDefault();
@@ -496,7 +646,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                 // IE / strict environments
             }
         },
-        [grouped, canReorderFlat, canReorderGrouped]
+        [checkMode, grouped, canReorderFlat, canReorderGrouped]
     );
 
     const onDragEnd = useCallback(() => {
@@ -505,13 +655,19 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
     }, []);
 
     const onDragOverRow = useCallback((e: DragEvent) => {
+        if (checkMode) {
+            return;
+        }
         e.preventDefault();
         e.dataTransfer.dropEffect = "move";
-    }, []);
+    }, [checkMode]);
 
     const onDropOnRowFlat = useCallback(
         (targetIndex: number) => (e: DragEvent) => {
             e.preventDefault();
+            if (checkMode) {
+                return;
+            }
             const activeDragId = draggingIdRef.current ?? draggingId;
             if (!canReorderFlat || activeDragId == null) {
                 draggingIdRef.current = undefined;
@@ -532,12 +688,15 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             draggingIdRef.current = undefined;
             setDraggingId(undefined);
         },
-        [displayItemsFlat, draggingId, persistOrderFlat, canReorderFlat]
+        [checkMode, displayItemsFlat, draggingId, persistOrderFlat, canReorderFlat]
     );
 
     const onDropOnRowGrouped = useCallback(
         (sectionKey: string, targetIndex: number) => (e: DragEvent) => {
             e.preventDefault();
+            if (checkMode) {
+                return;
+            }
             const activeDragId = draggingIdRef.current ?? draggingId;
             if (!canReorderGrouped || activeDragId == null) {
                 draggingIdRef.current = undefined;
@@ -565,14 +724,90 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             draggingIdRef.current = undefined;
             setDraggingId(undefined);
         },
-        [taskGroups, draggingId, persistOrderInSection, canReorderGrouped]
+        [checkMode, taskGroups, draggingId, persistOrderInSection, canReorderGrouped]
     );
+
+    const renderTaskRowCheckMode = (
+        item: ObjectItem,
+        _dropHandler: (e: DragEvent) => void,
+        _canReorder: boolean
+    ): ReactElement => {
+        const titleEv = taskNameAttribute?.get(item);
+        const title =
+            titleEv && titleEv.status === ValueStatus.Available && titleEv.value != null && String(titleEv.value).trim() !== ""
+                ? String(titleEv.value)
+                : item.id;
+
+        const checkedEv = taskCheckedAttribute?.get(item);
+        const checked =
+            checkedEv && checkedEv.status === ValueStatus.Available && checkedEv.value != null
+                ? Boolean(checkedEv.value)
+                : false;
+
+        const act = onTaskCheckedCommitted?.get(item);
+        const canToggle =
+            widgetReadOnly !== true &&
+            ((act?.canExecute === true && !act.isExecuting) ||
+                (checkedEv != null && checkedEv.status === ValueStatus.Available && typeof checkedEv.setValue === "function"));
+
+        const onToggle = (e: ChangeEvent<HTMLInputElement>): void => {
+            const next = e.target.checked;
+            if (act?.canExecute && !act.isExecuting) {
+                act.execute({ newChecked: next });
+                window.setTimeout(() => tasks.reload(), 0);
+                return;
+            }
+            if (!checkedEv || checkedEv.status !== ValueStatus.Available) {
+                return;
+            }
+            try {
+                checkedEv.setValue(next);
+                window.setTimeout(() => tasks.reload(), 0);
+            } catch (err) {
+                console.warn(
+                    "CustomDnDTaskList: taskCheckedAttribute setValue is not supported for this attribute; configure onTaskCheckedCommitted to persist.",
+                    err
+                );
+            }
+        };
+
+        return (
+            <li
+                key={item.id}
+                className={classNames("widget-custom-dnd-tasklist__row", "widget-custom-dnd-tasklist__row--checkmode", {
+                    "widget-custom-dnd-tasklist__row--dragging": draggingId === item.id
+                })}
+                onDragOver={undefined}
+                onDrop={undefined}
+            >
+                <div className="widget-custom-dnd-tasklist__check">
+                    <input
+                        type="checkbox"
+                        className="widget-custom-dnd-tasklist__checkbox"
+                        checked={checked}
+                        disabled={!canToggle}
+                        onChange={onToggle}
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={e => e.stopPropagation()}
+                        aria-label={`${title} をチェック`}
+                    />
+                </div>
+
+                <div className="widget-custom-dnd-tasklist__check-title" title={title}>
+                    {title}
+                </div>
+            </li>
+        );
+    };
 
     const renderTaskRow = (
         item: ObjectItem,
         dropHandler: (e: DragEvent) => void,
         canReorder: boolean
     ): ReactElement => {
+        if (checkMode) {
+            return renderTaskRowCheckMode(item, dropHandler, canReorder);
+        }
         return (
             <li
                 key={item.id}
@@ -684,10 +919,15 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         const showSortHint =
             taskGroups.some(g => g.tasks.length > 0) && !sortOrderAttrsLoadingAll && !sortOrderAttrsReadyAll;
 
+        const canEditSectionTitles = !checkMode && widgetReadOnly !== true && sectionNameAttribute != null;
+        const canAddSection = !checkMode && widgetReadOnly !== true && onInlineAddSection != null;
+
         return (
             <div
                 ref={setWidgetRootEl}
-                className={classNames("widget-custom-dnd-tasklist", className)}
+                className={classNames("widget-custom-dnd-tasklist", className, {
+                    "widget-custom-dnd-tasklist--checkmode": checkMode
+                })}
                 data-widget={name}
             >
                 {showSortHint ? (
@@ -696,6 +936,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                         の値が一部の行で未取得です。ページを再表示するか、データソースの設定を確認してください。
                     </p>
                 ) : null}
+                {checkModeHint}
                 {inlineEditHint}
                 <div className="widget-custom-dnd-tasklist__sections">
                     {taskGroups.map(group => (
@@ -704,12 +945,126 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                             className="widget-custom-dnd-tasklist__section"
                             aria-labelledby={`${name}-section-${group.sectionKey}`}
                         >
-                            <h3
-                                className="widget-custom-dnd-tasklist__section-title"
-                                id={`${name}-section-${group.sectionKey}`}
-                            >
-                                {group.sectionTitle}
-                            </h3>
+                            {(() => {
+                                if (checkMode) {
+                                    return (
+                                        <h3 className="widget-custom-dnd-tasklist__section-title" id={`${name}-section-${group.sectionKey}`}>
+                                            {group.sectionTitle}
+                                        </h3>
+                                    );
+                                }
+                                const editable =
+                                    canEditSectionTitles &&
+                                    group.sectionItem != null &&
+                                    group.sectionKey !== ORPHAN_SECTION_KEY;
+                                const editing =
+                                    group.sectionItem != null && inlineSectionEditKey === group.sectionItem.id;
+
+                                const titleId = `${name}-section-${group.sectionKey}`;
+                                const inputId = `${name}-section-title-input-${group.sectionKey}`;
+
+                                const attrEv = group.sectionItem ? sectionNameAttribute?.get(group.sectionItem) : undefined;
+                                const raw =
+                                    attrEv && attrEv.status === ValueStatus.Available && attrEv.value != null
+                                        ? String(attrEv.value)
+                                        : "";
+
+                                const beginEditPointer = (e: ReactPointerEvent): void => {
+                                    if (!editable || group.sectionItem == null) {
+                                        return;
+                                    }
+                                    if (e.pointerType === "mouse" && e.button !== 0) {
+                                        return;
+                                    }
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    handleBeginSectionInlineEdit(group.sectionItem, raw);
+                                    window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
+                                };
+
+                                const onInputKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+                                    if (!group.sectionItem) {
+                                        return;
+                                    }
+                                    if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        skipSectionBlurCommitRef.current = true;
+                                        handleSectionTitleCommit(group.sectionItem, inlineSectionEditDraft);
+                                        window.requestAnimationFrame(() => {
+                                            skipSectionBlurCommitRef.current = false;
+                                        });
+                                    } else if (e.key === "Escape") {
+                                        e.preventDefault();
+                                        skipSectionBlurCommitRef.current = true;
+                                        handleSectionTitleCancel();
+                                        window.requestAnimationFrame(() => {
+                                            skipSectionBlurCommitRef.current = false;
+                                        });
+                                    }
+                                };
+
+                                const onInputBlur = (): void => {
+                                    if (skipSectionBlurCommitRef.current || suppressInputBlurCommitRef.current) {
+                                        return;
+                                    }
+                                    if (group.sectionItem) {
+                                        handleSectionTitleCommit(group.sectionItem, inlineSectionEditDraft);
+                                    }
+                                };
+
+                                if (editing && group.sectionItem) {
+                                    return (
+                                        <div
+                                            id={titleId}
+                                            className="widget-custom-dnd-tasklist__section-title-wrap"
+                                            aria-label="セクション名"
+                                        >
+                                            <label
+                                                htmlFor={inputId}
+                                                className="widget-custom-dnd-tasklist__visually-hidden"
+                                            >
+                                                セクション名
+                                            </label>
+                                            <input
+                                                ref={sectionTitleInputRef}
+                                                id={inputId}
+                                                type="text"
+                                                className="widget-custom-dnd-tasklist__inline-edit-input widget-custom-dnd-tasklist__section-title-input"
+                                                value={inlineSectionEditDraft}
+                                                onChange={e => setInlineSectionEditDraft(e.target.value)}
+                                                onPointerDown={e => e.stopPropagation()}
+                                                onBlur={onInputBlur}
+                                                onKeyDown={onInputKeyDown}
+                                                autoComplete="off"
+                                            />
+                                        </div>
+                                    );
+                                }
+
+                                return (
+                                    <h3
+                                        className={classNames("widget-custom-dnd-tasklist__section-title", {
+                                            "widget-custom-dnd-tasklist__section-title--editable": editable
+                                        })}
+                                        id={titleId}
+                                        role={editable ? "button" : undefined}
+                                        tabIndex={editable ? 0 : undefined}
+                                        onPointerDown={beginEditPointer}
+                                        onKeyDown={e => {
+                                            if (!editable || group.sectionItem == null) {
+                                                return;
+                                            }
+                                            if (e.key === "Enter" || e.key === " ") {
+                                                e.preventDefault();
+                                                handleBeginSectionInlineEdit(group.sectionItem, raw);
+                                                window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
+                                            }
+                                        }}
+                                    >
+                                        {group.sectionTitle}
+                                    </h3>
+                                );
+                            })()}
                             <ul
                                 className="widget-custom-dnd-tasklist__list widget-custom-dnd-tasklist__list--nested"
                                 onDragOver={onDragOverRow}
@@ -717,7 +1072,8 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                                 {group.tasks.map((item, index) =>
                                     renderTaskRow(item, onDropOnRowGrouped(group.sectionKey, index), canReorderGrouped)
                                 )}
-                                {onInlineAddTask &&
+                                {!checkMode &&
+                                onInlineAddTask &&
                                 group.sectionItem != null &&
                                 group.sectionKey !== ORPHAN_SECTION_KEY ? (
                                     <SectionInlineTaskAdd
@@ -744,6 +1100,23 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                         </section>
                     ))}
                 </div>
+                {canAddSection ? (
+                    <InlineAddSection
+                        widgetName={name}
+                        expanded={inlineAddSectionExpanded}
+                        draft={inlineAddSectionDraft}
+                        onDraftChange={setInlineAddSectionDraft}
+                        onExpand={() => {
+                            setInlineAddSectionExpanded(true);
+                            setInlineAddSectionDraft("");
+                        }}
+                        onCollapse={() => collapseInlineAddSection()}
+                        onCommit={trimmed => handleInlineAddSectionCommit(trimmed)}
+                        busy={onInlineAddSection.isExecuting}
+                        canTrigger={onInlineAddSection.canExecute}
+                        parentBlurSuppressionRef={suppressInputBlurCommitRef}
+                    />
+                ) : null}
             </div>
         );
     }
@@ -773,12 +1146,19 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
     }
 
     return (
-        <div ref={setWidgetRootEl} className={classNames("widget-custom-dnd-tasklist", className)} data-widget={name}>
+        <div
+            ref={setWidgetRootEl}
+            className={classNames("widget-custom-dnd-tasklist", className, {
+                "widget-custom-dnd-tasklist--checkmode": checkMode
+            })}
+            data-widget={name}
+        >
             {displayItemsFlat.length > 0 && !sortOrderAttrsLoadingFlat && !sortOrderAttrsReadyFlat ? (
                 <p className="widget-custom-dnd-tasklist__hint">
                     SortOrder の値が一部の行で未取得です。ページを再表示するか、データソースの設定を確認してください。
                 </p>
             ) : null}
+            {checkModeHint}
             {inlineEditHint}
             <ul className="widget-custom-dnd-tasklist__list" onDragOver={onDragOverRow}>
                 {displayItemsFlat.map((item, index) => renderTaskRow(item, onDropOnRowFlat(index), canReorderFlat))}

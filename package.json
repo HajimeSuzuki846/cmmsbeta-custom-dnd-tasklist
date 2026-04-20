@@ -1,7 +1,7 @@
 {
   "name": "customdndtasklist",
   "widgetName": "CustomDnDTaskList",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "My widget description",
   "copyright": "© Mendix Technology BV 2026. All rights reserved.",
   "author": "Hajime Suzuki",
