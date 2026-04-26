@@ -1,7 +1,6 @@
 import {
     type DragEvent,
     type KeyboardEvent,
-    type ChangeEvent,
     type PointerEvent as ReactPointerEvent,
     type ReactNode,
     ReactElement,
@@ -15,7 +14,7 @@ import classNames from "classnames";
 import Big from "big.js";
 import { ObjectItem, ValueStatus } from "mendix";
 import { CustomDnDTaskListContainerProps } from "../../typings/CustomDnDTaskListProps";
-import { TaskRowActionIcons } from "./TaskRowActionIcons";
+import { runListAction, TaskRowActionIcons } from "./TaskRowActionIcons";
 import { SectionInlineTaskAdd } from "./SectionInlineTaskAdd";
 import { TaskRowEditableBody, type InlineEditField } from "./TaskRowEditableBody";
 import { InlineAddSection } from "./InlineAddSection";
@@ -163,6 +162,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         onInlineAddTask,
         onInlineAddSection,
         onTaskCheckedCommitted,
+        onCheckModeChevron,
         onTaskTitleCommitted,
         onTaskDescriptionCommitted,
         onSectionTitleCommitted,
@@ -219,6 +219,26 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
 
     const listReady = tasks.status === ValueStatus.Available;
 
+    const checkModeProgress = useMemo(() => {
+        if (!checkMode) {
+            return { checked: 0, total: 0 };
+        }
+        const items = grouped ? taskGroups.flatMap(g => g.tasks) : displayItemsFlat;
+        let checked = 0;
+        for (const item of items) {
+            const checkedEv = taskCheckedAttribute?.get(item);
+            if (
+                checkedEv &&
+                checkedEv.status === ValueStatus.Available &&
+                checkedEv.value != null &&
+                Boolean(checkedEv.value)
+            ) {
+                checked += 1;
+            }
+        }
+        return { checked, total: items.length };
+    }, [checkMode, grouped, taskGroups, displayItemsFlat, taskCheckedAttribute]);
+
     const sortOrderStatesFlat = useMemo(
         () => displayItemsFlat.map(it => sortOrderAttribute.get(it)),
         [displayItemsFlat, sortOrderAttribute]
@@ -239,27 +259,6 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         }
         return null;
     }, [checkMode, widgetReadOnly]);
-
-    const checkModeHint: ReactNode = useMemo(() => {
-        if (!checkMode) {
-            return null;
-        }
-        if (!taskCheckedAttribute) {
-            return (
-                <p className="widget-custom-dnd-tasklist__hint">
-                    チェックモードが有効ですが、「チェック状態（Boolean）」が未設定です。Widget 設定で Tasks の Boolean 属性を割り当ててください。
-                </p>
-            );
-        }
-        if (widgetReadOnly !== true && !onTaskCheckedCommitted) {
-            return (
-                <p className="widget-custom-dnd-tasklist__hint">
-                    チェックモードの保存には「チェック状態 確定後（onTaskCheckedCommitted）」の設定を推奨します（リストデータソース属性は setValue が未対応の場合があります）。
-                </p>
-            );
-        }
-        return null;
-    }, [checkMode, onTaskCheckedCommitted, taskCheckedAttribute, widgetReadOnly]);
 
     const sortOrderStatesAll = useMemo(
         () => allTaskItems.map(it => sortOrderAttribute.get(it)),
@@ -727,31 +726,10 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         [checkMode, taskGroups, draggingId, persistOrderInSection, canReorderGrouped]
     );
 
-    const renderTaskRowCheckMode = (
-        item: ObjectItem,
-        _dropHandler: (e: DragEvent) => void,
-        _canReorder: boolean
-    ): ReactElement => {
-        const titleEv = taskNameAttribute?.get(item);
-        const title =
-            titleEv && titleEv.status === ValueStatus.Available && titleEv.value != null && String(titleEv.value).trim() !== ""
-                ? String(titleEv.value)
-                : item.id;
-
-        const checkedEv = taskCheckedAttribute?.get(item);
-        const checked =
-            checkedEv && checkedEv.status === ValueStatus.Available && checkedEv.value != null
-                ? Boolean(checkedEv.value)
-                : false;
-
-        const act = onTaskCheckedCommitted?.get(item);
-        const canToggle =
-            widgetReadOnly !== true &&
-            ((act?.canExecute === true && !act.isExecuting) ||
-                (checkedEv != null && checkedEv.status === ValueStatus.Available && typeof checkedEv.setValue === "function"));
-
-        const onToggle = (e: ChangeEvent<HTMLInputElement>): void => {
-            const next = e.target.checked;
+    const commitCheckToggle = useCallback(
+        (item: ObjectItem, next: boolean): void => {
+            const act = onTaskCheckedCommitted?.get(item);
+            const checkedEv = taskCheckedAttribute?.get(item);
             if (act?.canExecute && !act.isExecuting) {
                 act.execute({ newChecked: next });
                 window.setTimeout(() => tasks.reload(), 0);
@@ -769,45 +747,101 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                     err
                 );
             }
-        };
+        },
+        [onTaskCheckedCommitted, taskCheckedAttribute, tasks]
+    );
 
-        return (
-            <li
-                key={item.id}
-                className={classNames("widget-custom-dnd-tasklist__row", "widget-custom-dnd-tasklist__row--checkmode", {
-                    "widget-custom-dnd-tasklist__row--dragging": draggingId === item.id
-                })}
-                onDragOver={undefined}
-                onDrop={undefined}
-            >
-                <div className="widget-custom-dnd-tasklist__check">
-                    <input
-                        type="checkbox"
-                        className="widget-custom-dnd-tasklist__checkbox"
-                        checked={checked}
-                        disabled={!canToggle}
-                        onChange={onToggle}
-                        onPointerDown={e => e.stopPropagation()}
-                        onClick={e => e.stopPropagation()}
-                        aria-label={`${title} をチェック`}
-                    />
-                </div>
+    const renderCheckModeTableRow = useCallback(
+        (item: ObjectItem): ReactElement => {
+            const titleEv = taskNameAttribute?.get(item);
+            const title =
+                titleEv && titleEv.status === ValueStatus.Available && titleEv.value != null && String(titleEv.value).trim() !== ""
+                    ? String(titleEv.value)
+                    : item.id;
 
-                <div className="widget-custom-dnd-tasklist__check-title" title={title}>
-                    {title}
-                </div>
-            </li>
-        );
-    };
+            const checkedEv = taskCheckedAttribute?.get(item);
+            const checked =
+                checkedEv && checkedEv.status === ValueStatus.Available && checkedEv.value != null
+                    ? Boolean(checkedEv.value)
+                    : false;
+
+            const act = onTaskCheckedCommitted?.get(item);
+            const canToggle =
+                widgetReadOnly !== true &&
+                ((act?.canExecute === true && !act.isExecuting) ||
+                    (checkedEv != null &&
+                        checkedEv.status === ValueStatus.Available &&
+                        typeof checkedEv.setValue === "function"));
+
+            const onToggle = (): void => {
+                if (!canToggle) {
+                    return;
+                }
+                commitCheckToggle(item, !checked);
+            };
+
+            const chevronAct = onCheckModeChevron?.get(item);
+
+            return (
+                <tr key={item.id} className="widget-custom-dnd-tasklist__checklist-row">
+                    <td className="widget-custom-dnd-tasklist__checklist-cell widget-custom-dnd-tasklist__checklist-cell--status">
+                        <button
+                            type="button"
+                            className={classNames("widget-custom-dnd-tasklist__status-toggle", {
+                                "widget-custom-dnd-tasklist__status-toggle--checked": checked,
+                                "widget-custom-dnd-tasklist__status-toggle--unchecked": !checked
+                            })}
+                            disabled={!canToggle}
+                            onClick={onToggle}
+                            onPointerDown={e => e.stopPropagation()}
+                            aria-pressed={checked}
+                            aria-label={`${title} のチェックを切り替え`}
+                        >
+                            <span className="widget-custom-dnd-tasklist__status-toggle-mark" aria-hidden>
+                                {checked ? "✓" : "−"}
+                            </span>
+                        </button>
+                    </td>
+                    <td className="widget-custom-dnd-tasklist__checklist-cell widget-custom-dnd-tasklist__checklist-cell--item">
+                        <div className="widget-custom-dnd-tasklist__checklist-item-main">
+                            <span className="widget-custom-dnd-tasklist__checklist-item-text" title={title}>
+                                {title}
+                            </span>
+                            {onCheckModeChevron && chevronAct ? (
+                                <button
+                                    type="button"
+                                    className="widget-custom-dnd-tasklist__checklist-chevron-btn"
+                                    aria-label={`${title} の詳細`}
+                                    title="開く"
+                                    disabled={!chevronAct.canExecute || chevronAct.isExecuting}
+                                    onPointerDown={e => e.stopPropagation()}
+                                    onClick={e => {
+                                        e.stopPropagation();
+                                        runListAction(onCheckModeChevron, item);
+                                    }}
+                                >
+                                    <span className="widget-custom-dnd-tasklist__checklist-chevron-mark" aria-hidden>
+                                        ›
+                                    </span>
+                                </button>
+                            ) : (
+                                <span className="widget-custom-dnd-tasklist__checklist-chevron" aria-hidden>
+                                    ›
+                                </span>
+                            )}
+                        </div>
+                    </td>
+                </tr>
+            );
+        },
+        [commitCheckToggle, onCheckModeChevron, taskNameAttribute, widgetReadOnly]
+    );
 
     const renderTaskRow = (
         item: ObjectItem,
         dropHandler: (e: DragEvent) => void,
         canReorder: boolean
     ): ReactElement => {
-        if (checkMode) {
-            return renderTaskRowCheckMode(item, dropHandler, canReorder);
-        }
         return (
             <li
                 key={item.id}
@@ -917,7 +951,10 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
 
     if (grouped && listReady) {
         const showSortHint =
-            taskGroups.some(g => g.tasks.length > 0) && !sortOrderAttrsLoadingAll && !sortOrderAttrsReadyAll;
+            !checkMode &&
+            taskGroups.some(g => g.tasks.length > 0) &&
+            !sortOrderAttrsLoadingAll &&
+            !sortOrderAttrsReadyAll;
 
         const canEditSectionTitles = !checkMode && widgetReadOnly !== true && sectionNameAttribute != null;
         const canAddSection = !checkMode && widgetReadOnly !== true && onInlineAddSection != null;
@@ -936,23 +973,50 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                         の値が一部の行で未取得です。ページを再表示するか、データソースの設定を確認してください。
                     </p>
                 ) : null}
-                {checkModeHint}
                 {inlineEditHint}
-                <div className="widget-custom-dnd-tasklist__sections">
-                    {taskGroups.map(group => (
+                {checkMode ? (
+                    <div className="widget-custom-dnd-tasklist__checklist-card">
+                        <div className="widget-custom-dnd-tasklist__checklist-head">
+                            <h2 className="widget-custom-dnd-tasklist__checklist-title">点検チェックリスト</h2>
+                            <span className="widget-custom-dnd-tasklist__checklist-badge">
+                                {checkModeProgress.checked} / {checkModeProgress.total}
+                            </span>
+                        </div>
+                        <div className="widget-custom-dnd-tasklist__checklist-sections">
+                            {taskGroups.map(group => (
+                                <div key={group.sectionKey} className="widget-custom-dnd-tasklist__checklist-section">
+                                    <h3
+                                        className="widget-custom-dnd-tasklist__checklist-section-heading"
+                                        id={`${name}-section-${group.sectionKey}`}
+                                    >
+                                        {group.sectionTitle}
+                                    </h3>
+                                    <table className="widget-custom-dnd-tasklist__checklist-table">
+                                        <thead>
+                                            <tr>
+                                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
+                                                    状態
+                                                </th>
+                                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
+                                                    点検項目
+                                                </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>{group.tasks.map(item => renderCheckModeTableRow(item))}</tbody>
+                                    </table>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ) : (
+                    <div className="widget-custom-dnd-tasklist__sections">
+                        {taskGroups.map(group => (
                         <section
                             key={group.sectionKey}
                             className="widget-custom-dnd-tasklist__section"
                             aria-labelledby={`${name}-section-${group.sectionKey}`}
                         >
                             {(() => {
-                                if (checkMode) {
-                                    return (
-                                        <h3 className="widget-custom-dnd-tasklist__section-title" id={`${name}-section-${group.sectionKey}`}>
-                                            {group.sectionTitle}
-                                        </h3>
-                                    );
-                                }
                                 const editable =
                                     canEditSectionTitles &&
                                     group.sectionItem != null &&
@@ -1098,8 +1162,9 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                                 ) : null}
                             </ul>
                         </section>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
                 {canAddSection ? (
                     <InlineAddSection
                         widgetName={name}
@@ -1153,16 +1218,42 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             })}
             data-widget={name}
         >
-            {displayItemsFlat.length > 0 && !sortOrderAttrsLoadingFlat && !sortOrderAttrsReadyFlat ? (
+            {displayItemsFlat.length > 0 &&
+            !checkMode &&
+            !sortOrderAttrsLoadingFlat &&
+            !sortOrderAttrsReadyFlat ? (
                 <p className="widget-custom-dnd-tasklist__hint">
                     SortOrder の値が一部の行で未取得です。ページを再表示するか、データソースの設定を確認してください。
                 </p>
             ) : null}
-            {checkModeHint}
             {inlineEditHint}
-            <ul className="widget-custom-dnd-tasklist__list" onDragOver={onDragOverRow}>
-                {displayItemsFlat.map((item, index) => renderTaskRow(item, onDropOnRowFlat(index), canReorderFlat))}
-            </ul>
+            {checkMode ? (
+                <div className="widget-custom-dnd-tasklist__checklist-card">
+                    <div className="widget-custom-dnd-tasklist__checklist-head">
+                        <h2 className="widget-custom-dnd-tasklist__checklist-title">点検チェックリスト</h2>
+                        <span className="widget-custom-dnd-tasklist__checklist-badge">
+                            {checkModeProgress.checked} / {checkModeProgress.total}
+                        </span>
+                    </div>
+                    <table className="widget-custom-dnd-tasklist__checklist-table">
+                        <thead>
+                            <tr>
+                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
+                                    状態
+                                </th>
+                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
+                                    点検項目
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>{displayItemsFlat.map(item => renderCheckModeTableRow(item))}</tbody>
+                    </table>
+                </div>
+            ) : (
+                <ul className="widget-custom-dnd-tasklist__list" onDragOver={onDragOverRow}>
+                    {displayItemsFlat.map((item, index) => renderTaskRow(item, onDropOnRowFlat(index), canReorderFlat))}
+                </ul>
+            )}
         </div>
     );
 }

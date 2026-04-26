@@ -27,7 +27,7 @@ export function DeleteIcon(): ReactElement {
     );
 }
 
-function runListAction(listAction: ListActionValue | undefined, item: ObjectItem): void {
+export function runListAction(listAction: ListActionValue | undefined, item: ObjectItem): void {
     if (!listAction) {
         return;
     }

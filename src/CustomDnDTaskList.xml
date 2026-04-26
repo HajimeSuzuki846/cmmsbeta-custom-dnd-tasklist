@@ -122,6 +122,10 @@
                     <actionVariable key="newChecked" type="Boolean" caption="確定したチェック状態" />
                 </actionVariables>
             </property>
+            <property key="onCheckModeChevron" type="action" dataSource="tasks" required="false">
+                <caption>チェックモード：点検項目の「＞」押下時</caption>
+                <description>チェックモード時のみ有効。点検項目列の右側「＞」を押したときに実行するアクション。**パラメータにその行のタスク**を渡してください。未設定のとき「＞」は表示のみで押下しても何もしません。</description>
+            </property>
         </propertyGroup>
         <propertyGroup caption="並べ替え（DnD）">
             <property key="onPersistSortOrder" type="action" required="false">

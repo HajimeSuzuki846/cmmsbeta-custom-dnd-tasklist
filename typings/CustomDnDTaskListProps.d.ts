@@ -30,6 +30,7 @@ export interface CustomDnDTaskListContainerProps {
     onTaskDescriptionCommitted?: ListActionValue<{ newDescription: Option<string> }>;
     onSectionTitleCommitted?: ListActionValue<{ newTitle: Option<string> }>;
     onTaskCheckedCommitted?: ListActionValue<{ newChecked: Option<boolean> }>;
+    onCheckModeChevron?: ListActionValue;
     onPersistSortOrder?: ActionValue<{ sortOrderPayload: Option<string> }>;
     onSortOrderChanged?: ActionValue;
 }
@@ -63,6 +64,7 @@ export interface CustomDnDTaskListPreviewProps {
     onTaskDescriptionCommitted: {} | null;
     onSectionTitleCommitted: {} | null;
     onTaskCheckedCommitted: {} | null;
+    onCheckModeChevron: {} | null;
     onPersistSortOrder: {} | null;
     onSortOrderChanged: {} | null;
 }

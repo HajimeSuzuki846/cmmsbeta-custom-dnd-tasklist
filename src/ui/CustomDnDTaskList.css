@@ -103,32 +103,214 @@
     border-bottom: 1px solid #e8ecf2;
 }
 
-.widget-custom-dnd-tasklist__row--checkmode {
-    gap: 8px;
-    padding: 6px 10px;
+/* --- チェックモード: 点検チェックリスト（表形式・コンパクト） --- */
+.widget-custom-dnd-tasklist--checkmode {
+    font-size: 12px;
+    line-height: 1.35;
 }
 
-.widget-custom-dnd-tasklist__check {
-    flex: 0 0 auto;
+.widget-custom-dnd-tasklist__checklist-card {
+    box-sizing: border-box;
+    width: 100%;
+    padding: 0;
+    border: none;
+    border-radius: 8px;
+    background: #fff;
+    overflow: hidden;
+}
+
+.widget-custom-dnd-tasklist__checklist-head {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+    padding: 0;
+}
+
+.widget-custom-dnd-tasklist__checklist-title {
+    margin: 0;
+    font-size: 1.08em;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #1a2332;
+}
+
+.widget-custom-dnd-tasklist__checklist-badge {
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 28px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.92em;
+    font-weight: 600;
+    line-height: 1.3;
+    color: #2563eb;
+    background: #e8f1ff;
 }
 
-.widget-custom-dnd-tasklist__checkbox {
-    width: 16px;
-    height: 16px;
-    margin: 0;
+.widget-custom-dnd-tasklist__checklist-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 0;
 }
 
-.widget-custom-dnd-tasklist__check-title {
+.widget-custom-dnd-tasklist__checklist-section {
+    padding: 0;
+}
+
+.widget-custom-dnd-tasklist__checklist-section-heading {
+    margin: 0 0 6px;
+    font-size: 1em;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #1a2332;
+}
+
+.widget-custom-dnd-tasklist__checklist-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font-size: inherit;
+    border-top: 1px solid #e8ecf2;
+}
+
+.widget-custom-dnd-tasklist__checklist-th {
+    padding: 6px 8px;
+    text-align: left;
+    font-weight: 600;
+    font-size: inherit;
+    color: #2e3b4d;
+    background: #f3f5f8;
+    border: 1px solid #e0e4eb;
+    border-bottom: 1px solid #d8dde6;
+}
+
+.widget-custom-dnd-tasklist__checklist-th:first-child {
+    width: 52px;
+    text-align: center;
+}
+
+.widget-custom-dnd-tasklist__checklist-cell {
+    padding: 6px 8px;
+    vertical-align: middle;
+    border: 1px solid #e8ecf2;
+    font-size: inherit;
+}
+
+.widget-custom-dnd-tasklist__checklist-cell--status {
+    width: 52px;
+    text-align: center;
+    background: #fff;
+}
+
+.widget-custom-dnd-tasklist__checklist-cell--item {
+    vertical-align: top;
+    background: #fff;
+}
+
+.widget-custom-dnd-tasklist__checklist-row:last-child .widget-custom-dnd-tasklist__checklist-cell {
+    border-bottom: 1px solid #e8ecf2;
+}
+
+.widget-custom-dnd-tasklist__checklist-item-main {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.widget-custom-dnd-tasklist__checklist-item-text {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    font-weight: 600;
+    font-weight: 500;
+    color: #2e3b4d;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.35;
+}
+
+.widget-custom-dnd-tasklist__checklist-chevron {
+    flex: 0 0 auto;
+    margin-top: 0;
+    font-size: 22px;
+    font-weight: 500;
+    color: #9aa5b8;
+    line-height: 1;
+    pointer-events: none;
+    min-width: 28px;
+    text-align: center;
+}
+
+.widget-custom-dnd-tasklist__checklist-chevron-btn {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 2px 6px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #9aa5b8;
+    cursor: pointer;
+    line-height: 1;
+    min-width: 40px;
+    min-height: 40px;
+}
+
+.widget-custom-dnd-tasklist__checklist-chevron-btn:hover:not(:disabled) {
+    background: #eef1f6;
+    color: #5c6a82;
+}
+
+.widget-custom-dnd-tasklist__checklist-chevron-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.widget-custom-dnd-tasklist__checklist-chevron-mark {
+    font-size: 22px;
+    line-height: 1;
+    font-weight: 500;
+}
+
+.widget-custom-dnd-tasklist__status-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.widget-custom-dnd-tasklist__status-toggle:disabled {
+    cursor: not-allowed;
+    opacity: 0.45;
+}
+
+.widget-custom-dnd-tasklist__status-toggle--checked {
+    background: #2e6bff;
+    color: #fff;
+}
+
+.widget-custom-dnd-tasklist__status-toggle--unchecked {
+    background: #b8c0d0;
+    color: #fff;
+}
+
+.widget-custom-dnd-tasklist__status-toggle-mark {
+    display: block;
+    font-size: 11px;
+    line-height: 1;
+    font-weight: 700;
+    transform: translateY(0.5px);
 }
 
 .widget-custom-dnd-tasklist--checkmode .widget-custom-dnd-tasklist__row-actions {
