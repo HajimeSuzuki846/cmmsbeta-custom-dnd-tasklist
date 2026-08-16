@@ -80,6 +80,10 @@
                 <caption>削除（行）</caption>
                 <description>行右の削除アイコン押下時に実行するアクション。マイクロフロー等で削除や確認ダイアログを行う場合、**パラメータにその行のタスク**を渡してください。</description>
             </property>
+            <property key="onSectionDelete" type="action" dataSource="sections" required="false">
+                <caption>削除（セクション）</caption>
+                <description>セクション見出し右の削除アイコン押下時に実行するアクション。マイクロフロー等で削除や確認ダイアログを行う場合、**パラメータにそのセクション**を渡してください。配下タスクの扱い（削除／付け替え）もこのアクション内で行ってください。</description>
+            </property>
             <property key="onInlineAddTask" type="action" dataSource="sections" required="false">
                 <caption>タスク追加（入力確定時）</caption>
                 <description>セクション別表示時のみ有効。各セクションのリスト末尾に「タスクを追加…」を表示し、タップ後にインライン入力できます。確定時（Enter または入力欄からフォーカスが外れたとき、空でなければ）に実行します。**パラメータにそのセクションのオブジェクト**を渡し、タスク名は変数 **newTaskTitle**（String）で渡します。タスクの作成・Section への関連付け・SortOrder の付与はこのアクション内で行ってください。</description>
@@ -89,7 +93,7 @@
             </property>
             <property key="onInlineAddSection" type="action" required="false">
                 <caption>セクション追加（入力確定時）</caption>
-                <description>セクション別表示時のみ有効。セクション一覧の末尾に「セクションを追加…」を表示し、タップ後にインライン入力できます。確定時（Enter または入力欄からフォーカスが外れたとき、空でなければ）に実行します。セクションの作成・コミットはこのアクション内で行ってください。</description>
+                <description>セクション別表示時のみ有効（セクション／タスクがまだ 0 件のときも「セクションを追加…」を表示します）。セクション一覧の末尾に入力 UI を出し、確定時（Enter またはフォーカスアウト、空でなければ）に実行します。セクションの作成・コミットはこのアクション内で行ってください。</description>
                 <actionVariables>
                     <actionVariable key="newSectionTitle" type="String" caption="入力したセクション名" />
                 </actionVariables>

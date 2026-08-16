@@ -14,7 +14,7 @@ import classNames from "classnames";
 import Big from "big.js";
 import { ObjectItem, ValueStatus } from "mendix";
 import { CustomDnDTaskListContainerProps } from "../../typings/CustomDnDTaskListProps";
-import { runListAction, TaskRowActionIcons } from "./TaskRowActionIcons";
+import { DeleteIcon, runListAction, TaskRowActionIcons } from "./TaskRowActionIcons";
 import { SectionInlineTaskAdd } from "./SectionInlineTaskAdd";
 import { TaskRowEditableBody, type InlineEditField } from "./TaskRowEditableBody";
 import { InlineAddSection } from "./InlineAddSection";
@@ -51,14 +51,14 @@ function compareSortOrder(
     return aVal.cmp(bVal);
 }
 
+function isSectionModeConfigured(props: CustomDnDTaskListContainerProps): boolean {
+    return props.sections != null && props.taskSection != null;
+}
+
 function isGroupedMode(props: CustomDnDTaskListContainerProps): boolean {
-    const { sections, taskSection } = props;
-    return (
-        sections != null &&
-        taskSection != null &&
-        sections.status === ValueStatus.Available &&
-        (sections.items?.length ?? 0) > 0
-    );
+    const { sections } = props;
+    // セクション 0 件でもセクション追加 UI を出せるよう、件数は見ない
+    return isSectionModeConfigured(props) && sections != null && sections.status === ValueStatus.Available;
 }
 
 type TaskGroup = {
@@ -159,6 +159,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         taskCheckedAttribute,
         onTaskDetail,
         onTaskDelete,
+        onSectionDelete,
         onInlineAddTask,
         onInlineAddSection,
         onTaskCheckedCommitted,
@@ -897,7 +898,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
     }
 
     if (
-        grouped &&
+        isSectionModeConfigured(props) &&
         sections != null &&
         sections.status === ValueStatus.Loading &&
         (sections.items == null || sections.items.length === 0)
@@ -913,7 +914,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         );
     }
 
-    if (grouped && sections != null && sections.status !== ValueStatus.Available) {
+    if (isSectionModeConfigured(props) && sections != null && sections.status !== ValueStatus.Available) {
         return (
             <div
                 ref={setWidgetRootEl}
@@ -958,6 +959,8 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
 
         const canEditSectionTitles = !checkMode && widgetReadOnly !== true && sectionNameAttribute != null;
         const canAddSection = !checkMode && widgetReadOnly !== true && onInlineAddSection != null;
+        const canDeleteSection = !checkMode && widgetReadOnly !== true && onSectionDelete != null;
+        const hasNoSections = taskGroups.length === 0;
 
         return (
             <div
@@ -974,6 +977,13 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                     </p>
                 ) : null}
                 {inlineEditHint}
+                {hasNoSections && !checkMode ? (
+                    <div className="widget-custom-dnd-tasklist__empty">
+                        {canAddSection
+                            ? "セクションがありません。下から追加してください。"
+                            : "セクションがありません。"}
+                    </div>
+                ) : null}
                 {checkMode ? (
                     <div className="widget-custom-dnd-tasklist__checklist-card">
                         <div className="widget-custom-dnd-tasklist__checklist-head">
@@ -1076,57 +1086,102 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                                     }
                                 };
 
+                                const canDeleteThisSection =
+                                    canDeleteSection &&
+                                    group.sectionItem != null &&
+                                    group.sectionKey !== ORPHAN_SECTION_KEY;
+                                const sectionDeleteAct =
+                                    canDeleteThisSection && group.sectionItem != null
+                                        ? onSectionDelete!.get(group.sectionItem)
+                                        : undefined;
+
                                 if (editing && group.sectionItem) {
                                     return (
-                                        <div
-                                            id={titleId}
-                                            className="widget-custom-dnd-tasklist__section-title-wrap"
-                                            aria-label="セクション名"
-                                        >
-                                            <label
-                                                htmlFor={inputId}
-                                                className="widget-custom-dnd-tasklist__visually-hidden"
+                                        <div className="widget-custom-dnd-tasklist__section-header">
+                                            <div
+                                                id={titleId}
+                                                className="widget-custom-dnd-tasklist__section-title-wrap"
+                                                aria-label="セクション名"
                                             >
-                                                セクション名
-                                            </label>
-                                            <input
-                                                ref={sectionTitleInputRef}
-                                                id={inputId}
-                                                type="text"
-                                                className="widget-custom-dnd-tasklist__inline-edit-input widget-custom-dnd-tasklist__section-title-input"
-                                                value={inlineSectionEditDraft}
-                                                onChange={e => setInlineSectionEditDraft(e.target.value)}
-                                                onPointerDown={e => e.stopPropagation()}
-                                                onBlur={onInputBlur}
-                                                onKeyDown={onInputKeyDown}
-                                                autoComplete="off"
-                                            />
+                                                <label
+                                                    htmlFor={inputId}
+                                                    className="widget-custom-dnd-tasklist__visually-hidden"
+                                                >
+                                                    セクション名
+                                                </label>
+                                                <input
+                                                    ref={sectionTitleInputRef}
+                                                    id={inputId}
+                                                    type="text"
+                                                    className="widget-custom-dnd-tasklist__inline-edit-input widget-custom-dnd-tasklist__section-title-input"
+                                                    value={inlineSectionEditDraft}
+                                                    onChange={e => setInlineSectionEditDraft(e.target.value)}
+                                                    onPointerDown={e => e.stopPropagation()}
+                                                    onBlur={onInputBlur}
+                                                    onKeyDown={onInputKeyDown}
+                                                    autoComplete="off"
+                                                />
+                                            </div>
+                                            {canDeleteThisSection && sectionDeleteAct ? (
+                                                <button
+                                                    type="button"
+                                                    className="widget-custom-dnd-tasklist__icon-btn widget-custom-dnd-tasklist__icon-btn--danger"
+                                                    aria-label={`${group.sectionTitle} を削除`}
+                                                    title="セクションを削除"
+                                                    disabled={!sectionDeleteAct.canExecute || sectionDeleteAct.isExecuting}
+                                                    onPointerDown={e => e.stopPropagation()}
+                                                    onClick={e => {
+                                                        e.stopPropagation();
+                                                        runListAction(onSectionDelete, group.sectionItem!);
+                                                    }}
+                                                >
+                                                    <DeleteIcon />
+                                                </button>
+                                            ) : null}
                                         </div>
                                     );
                                 }
 
                                 return (
-                                    <h3
-                                        className={classNames("widget-custom-dnd-tasklist__section-title", {
-                                            "widget-custom-dnd-tasklist__section-title--editable": editable
-                                        })}
-                                        id={titleId}
-                                        role={editable ? "button" : undefined}
-                                        tabIndex={editable ? 0 : undefined}
-                                        onPointerDown={beginEditPointer}
-                                        onKeyDown={e => {
-                                            if (!editable || group.sectionItem == null) {
-                                                return;
-                                            }
-                                            if (e.key === "Enter" || e.key === " ") {
-                                                e.preventDefault();
-                                                handleBeginSectionInlineEdit(group.sectionItem, raw);
-                                                window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
-                                            }
-                                        }}
-                                    >
-                                        {group.sectionTitle}
-                                    </h3>
+                                    <div className="widget-custom-dnd-tasklist__section-header">
+                                        <h3
+                                            className={classNames("widget-custom-dnd-tasklist__section-title", {
+                                                "widget-custom-dnd-tasklist__section-title--editable": editable
+                                            })}
+                                            id={titleId}
+                                            role={editable ? "button" : undefined}
+                                            tabIndex={editable ? 0 : undefined}
+                                            onPointerDown={beginEditPointer}
+                                            onKeyDown={e => {
+                                                if (!editable || group.sectionItem == null) {
+                                                    return;
+                                                }
+                                                if (e.key === "Enter" || e.key === " ") {
+                                                    e.preventDefault();
+                                                    handleBeginSectionInlineEdit(group.sectionItem, raw);
+                                                    window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
+                                                }
+                                            }}
+                                        >
+                                            {group.sectionTitle}
+                                        </h3>
+                                        {canDeleteThisSection && sectionDeleteAct ? (
+                                            <button
+                                                type="button"
+                                                className="widget-custom-dnd-tasklist__icon-btn widget-custom-dnd-tasklist__icon-btn--danger"
+                                                aria-label={`${group.sectionTitle} を削除`}
+                                                title="セクションを削除"
+                                                disabled={!sectionDeleteAct.canExecute || sectionDeleteAct.isExecuting}
+                                                onPointerDown={e => e.stopPropagation()}
+                                                onClick={e => {
+                                                    e.stopPropagation();
+                                                    runListAction(onSectionDelete, group.sectionItem!);
+                                                }}
+                                            >
+                                                <DeleteIcon />
+                                            </button>
+                                        ) : null}
+                                    </div>
                                 );
                             })()}
                             <ul

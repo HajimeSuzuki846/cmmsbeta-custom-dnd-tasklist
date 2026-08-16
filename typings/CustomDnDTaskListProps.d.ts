@@ -24,6 +24,7 @@ export interface CustomDnDTaskListContainerProps {
     checkMode: boolean;
     onTaskDetail?: ListActionValue;
     onTaskDelete?: ListActionValue;
+    onSectionDelete?: ListActionValue;
     onInlineAddTask?: ListActionValue<{ newTaskTitle: Option<string> }>;
     onInlineAddSection?: ActionValue<{ newSectionTitle: Option<string> }>;
     onTaskTitleCommitted?: ListActionValue<{ newTitle: Option<string> }>;
@@ -58,6 +59,7 @@ export interface CustomDnDTaskListPreviewProps {
     checkMode: boolean;
     onTaskDetail: {} | null;
     onTaskDelete: {} | null;
+    onSectionDelete: {} | null;
     onInlineAddTask: {} | null;
     onInlineAddSection: {} | null;
     onTaskTitleCommitted: {} | null;

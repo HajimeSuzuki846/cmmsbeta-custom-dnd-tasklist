@@ -58,6 +58,34 @@
     color: #1a2332;
 }
 
+.widget-custom-dnd-tasklist__section-header {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    margin: 0 0 8px;
+}
+
+.widget-custom-dnd-tasklist__section-header .widget-custom-dnd-tasklist__section-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+}
+
+.widget-custom-dnd-tasklist__section-header .widget-custom-dnd-tasklist__section-title-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+}
+
+.widget-custom-dnd-tasklist__section-header .widget-custom-dnd-tasklist__section-title-input {
+    margin: 0;
+}
+
+.widget-custom-dnd-tasklist__section-header .widget-custom-dnd-tasklist__icon-btn {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+}
+
 .widget-custom-dnd-tasklist__section-title--editable {
     cursor: pointer;
     border-radius: 6px;
