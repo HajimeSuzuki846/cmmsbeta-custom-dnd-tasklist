@@ -127,4 +127,3 @@ export function InlineAddSection(props: InlineAddSectionProps): ReactElement {
         </div>
     );
 }
-

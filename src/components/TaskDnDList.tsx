@@ -21,6 +21,28 @@ import { InlineAddSection } from "./InlineAddSection";
 
 const ORPHAN_SECTION_KEY = "__orphan__";
 
+function CheckModeChevronIcon(): ReactElement {
+    return (
+        <svg
+            className="widget-custom-dnd-tasklist__checklist-chevron-icon"
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            aria-hidden
+            focusable="false"
+        >
+            <path
+                d="M9 5.5 16.5 12 9 18.5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.6"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+            />
+        </svg>
+    );
+}
+
 /** One line per task: object id, tab, 1-based sort index. Microflow: split lines, then split by tab. */
 function serializeSortOrderPayload(items: ObjectItem[]): string {
     return items.map((it, i) => `${it.id}\t${i + 1}`).join("\n");
@@ -219,26 +241,6 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
     }, [sortedItems, sections, taskSection]);
 
     const listReady = tasks.status === ValueStatus.Available;
-
-    const checkModeProgress = useMemo(() => {
-        if (!checkMode) {
-            return { checked: 0, total: 0 };
-        }
-        const items = grouped ? taskGroups.flatMap(g => g.tasks) : displayItemsFlat;
-        let checked = 0;
-        for (const item of items) {
-            const checkedEv = taskCheckedAttribute?.get(item);
-            if (
-                checkedEv &&
-                checkedEv.status === ValueStatus.Available &&
-                checkedEv.value != null &&
-                Boolean(checkedEv.value)
-            ) {
-                checked += 1;
-            }
-        }
-        return { checked, total: items.length };
-    }, [checkMode, grouped, taskGroups, displayItemsFlat, taskCheckedAttribute]);
 
     const sortOrderStatesFlat = useMemo(
         () => displayItemsFlat.map(it => sortOrderAttribute.get(it)),
@@ -654,13 +656,16 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         setDraggingId(undefined);
     }, []);
 
-    const onDragOverRow = useCallback((e: DragEvent) => {
-        if (checkMode) {
-            return;
-        }
-        e.preventDefault();
-        e.dataTransfer.dropEffect = "move";
-    }, [checkMode]);
+    const onDragOverRow = useCallback(
+        (e: DragEvent) => {
+            if (checkMode) {
+                return;
+            }
+            e.preventDefault();
+            e.dataTransfer.dropEffect = "move";
+        },
+        [checkMode]
+    );
 
     const onDropOnRowFlat = useCallback(
         (targetIndex: number) => (e: DragEvent) => {
@@ -756,7 +761,10 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         (item: ObjectItem): ReactElement => {
             const titleEv = taskNameAttribute?.get(item);
             const title =
-                titleEv && titleEv.status === ValueStatus.Available && titleEv.value != null && String(titleEv.value).trim() !== ""
+                titleEv &&
+                titleEv.status === ValueStatus.Available &&
+                titleEv.value != null &&
+                String(titleEv.value).trim() !== ""
                     ? String(titleEv.value)
                     : item.id;
 
@@ -784,55 +792,53 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             const chevronAct = onCheckModeChevron?.get(item);
 
             return (
-                <tr key={item.id} className="widget-custom-dnd-tasklist__checklist-row">
-                    <td className="widget-custom-dnd-tasklist__checklist-cell widget-custom-dnd-tasklist__checklist-cell--status">
+                <div
+                    key={item.id}
+                    className={classNames("widget-custom-dnd-tasklist__checklist-item", {
+                        "widget-custom-dnd-tasklist__checklist-item--checked": checked,
+                        "widget-custom-dnd-tasklist__checklist-item--unchecked": !checked
+                    })}
+                >
+                    <button
+                        type="button"
+                        className={classNames("widget-custom-dnd-tasklist__status-toggle", {
+                            "widget-custom-dnd-tasklist__status-toggle--checked": checked,
+                            "widget-custom-dnd-tasklist__status-toggle--unchecked": !checked
+                        })}
+                        disabled={!canToggle}
+                        onClick={onToggle}
+                        onPointerDown={e => e.stopPropagation()}
+                        aria-pressed={checked}
+                        aria-label={`${title} のチェックを切り替え`}
+                    >
+                        <span className="widget-custom-dnd-tasklist__status-toggle-mark" aria-hidden>
+                            {checked ? "✓" : ""}
+                        </span>
+                    </button>
+                    <span className="widget-custom-dnd-tasklist__checklist-item-text" title={title}>
+                        {title}
+                    </span>
+                    {onCheckModeChevron && chevronAct ? (
                         <button
                             type="button"
-                            className={classNames("widget-custom-dnd-tasklist__status-toggle", {
-                                "widget-custom-dnd-tasklist__status-toggle--checked": checked,
-                                "widget-custom-dnd-tasklist__status-toggle--unchecked": !checked
-                            })}
-                            disabled={!canToggle}
-                            onClick={onToggle}
+                            className="widget-custom-dnd-tasklist__checklist-chevron-btn"
+                            aria-label={`${title} の詳細`}
+                            title="開く"
+                            disabled={!chevronAct.canExecute || chevronAct.isExecuting}
                             onPointerDown={e => e.stopPropagation()}
-                            aria-pressed={checked}
-                            aria-label={`${title} のチェックを切り替え`}
+                            onClick={e => {
+                                e.stopPropagation();
+                                runListAction(onCheckModeChevron, item);
+                            }}
                         >
-                            <span className="widget-custom-dnd-tasklist__status-toggle-mark" aria-hidden>
-                                {checked ? "✓" : "−"}
-                            </span>
+                            <CheckModeChevronIcon />
                         </button>
-                    </td>
-                    <td className="widget-custom-dnd-tasklist__checklist-cell widget-custom-dnd-tasklist__checklist-cell--item">
-                        <div className="widget-custom-dnd-tasklist__checklist-item-main">
-                            <span className="widget-custom-dnd-tasklist__checklist-item-text" title={title}>
-                                {title}
-                            </span>
-                            {onCheckModeChevron && chevronAct ? (
-                                <button
-                                    type="button"
-                                    className="widget-custom-dnd-tasklist__checklist-chevron-btn"
-                                    aria-label={`${title} の詳細`}
-                                    title="開く"
-                                    disabled={!chevronAct.canExecute || chevronAct.isExecuting}
-                                    onPointerDown={e => e.stopPropagation()}
-                                    onClick={e => {
-                                        e.stopPropagation();
-                                        runListAction(onCheckModeChevron, item);
-                                    }}
-                                >
-                                    <span className="widget-custom-dnd-tasklist__checklist-chevron-mark" aria-hidden>
-                                        ›
-                                    </span>
-                                </button>
-                            ) : (
-                                <span className="widget-custom-dnd-tasklist__checklist-chevron" aria-hidden>
-                                    ›
-                                </span>
-                            )}
-                        </div>
-                    </td>
-                </tr>
+                    ) : (
+                        <span className="widget-custom-dnd-tasklist__checklist-chevron" aria-hidden>
+                            <CheckModeChevronIcon />
+                        </span>
+                    )}
+                </div>
             );
         },
         [commitCheckToggle, onCheckModeChevron, taskNameAttribute, widgetReadOnly]
@@ -985,150 +991,184 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                     </div>
                 ) : null}
                 {checkMode ? (
-                    <div className="widget-custom-dnd-tasklist__checklist-card">
-                        <div className="widget-custom-dnd-tasklist__checklist-head">
-                            <h2 className="widget-custom-dnd-tasklist__checklist-title">点検チェックリスト</h2>
-                            <span className="widget-custom-dnd-tasklist__checklist-badge">
-                                {checkModeProgress.checked} / {checkModeProgress.total}
-                            </span>
-                        </div>
-                        <div className="widget-custom-dnd-tasklist__checklist-sections">
-                            {taskGroups.map(group => (
-                                <div key={group.sectionKey} className="widget-custom-dnd-tasklist__checklist-section">
-                                    <h3
-                                        className="widget-custom-dnd-tasklist__checklist-section-heading"
-                                        id={`${name}-section-${group.sectionKey}`}
-                                    >
-                                        {group.sectionTitle}
-                                    </h3>
-                                    <table className="widget-custom-dnd-tasklist__checklist-table">
-                                        <thead>
-                                            <tr>
-                                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
-                                                    状態
-                                                </th>
-                                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
-                                                    点検項目
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>{group.tasks.map(item => renderCheckModeTableRow(item))}</tbody>
-                                    </table>
+                    <div className="widget-custom-dnd-tasklist__checklist-sections">
+                        {taskGroups.map(group => (
+                            <div key={group.sectionKey} className="widget-custom-dnd-tasklist__checklist-section">
+                                <h3
+                                    className="widget-custom-dnd-tasklist__checklist-section-heading"
+                                    id={`${name}-section-${group.sectionKey}`}
+                                >
+                                    {group.sectionTitle}
+                                </h3>
+                                <div className="widget-custom-dnd-tasklist__checklist">
+                                    {group.tasks.map(item => renderCheckModeTableRow(item))}
                                 </div>
-                            ))}
-                        </div>
+                            </div>
+                        ))}
                     </div>
                 ) : (
                     <div className="widget-custom-dnd-tasklist__sections">
                         {taskGroups.map(group => (
-                        <section
-                            key={group.sectionKey}
-                            className="widget-custom-dnd-tasklist__section"
-                            aria-labelledby={`${name}-section-${group.sectionKey}`}
-                        >
-                            {(() => {
-                                const editable =
-                                    canEditSectionTitles &&
-                                    group.sectionItem != null &&
-                                    group.sectionKey !== ORPHAN_SECTION_KEY;
-                                const editing =
-                                    group.sectionItem != null && inlineSectionEditKey === group.sectionItem.id;
+                            <section
+                                key={group.sectionKey}
+                                className="widget-custom-dnd-tasklist__section"
+                                aria-labelledby={`${name}-section-${group.sectionKey}`}
+                            >
+                                {(() => {
+                                    const editable =
+                                        canEditSectionTitles &&
+                                        group.sectionItem != null &&
+                                        group.sectionKey !== ORPHAN_SECTION_KEY;
+                                    const editing =
+                                        group.sectionItem != null && inlineSectionEditKey === group.sectionItem.id;
 
-                                const titleId = `${name}-section-${group.sectionKey}`;
-                                const inputId = `${name}-section-title-input-${group.sectionKey}`;
+                                    const titleId = `${name}-section-${group.sectionKey}`;
+                                    const inputId = `${name}-section-title-input-${group.sectionKey}`;
 
-                                const attrEv = group.sectionItem ? sectionNameAttribute?.get(group.sectionItem) : undefined;
-                                const raw =
-                                    attrEv && attrEv.status === ValueStatus.Available && attrEv.value != null
-                                        ? String(attrEv.value)
-                                        : "";
-
-                                const beginEditPointer = (e: ReactPointerEvent): void => {
-                                    if (!editable || group.sectionItem == null) {
-                                        return;
-                                    }
-                                    if (e.pointerType === "mouse" && e.button !== 0) {
-                                        return;
-                                    }
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    handleBeginSectionInlineEdit(group.sectionItem, raw);
-                                    window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
-                                };
-
-                                const onInputKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
-                                    if (!group.sectionItem) {
-                                        return;
-                                    }
-                                    if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        skipSectionBlurCommitRef.current = true;
-                                        handleSectionTitleCommit(group.sectionItem, inlineSectionEditDraft);
-                                        window.requestAnimationFrame(() => {
-                                            skipSectionBlurCommitRef.current = false;
-                                        });
-                                    } else if (e.key === "Escape") {
-                                        e.preventDefault();
-                                        skipSectionBlurCommitRef.current = true;
-                                        handleSectionTitleCancel();
-                                        window.requestAnimationFrame(() => {
-                                            skipSectionBlurCommitRef.current = false;
-                                        });
-                                    }
-                                };
-
-                                const onInputBlur = (): void => {
-                                    if (skipSectionBlurCommitRef.current || suppressInputBlurCommitRef.current) {
-                                        return;
-                                    }
-                                    if (group.sectionItem) {
-                                        handleSectionTitleCommit(group.sectionItem, inlineSectionEditDraft);
-                                    }
-                                };
-
-                                const canDeleteThisSection =
-                                    canDeleteSection &&
-                                    group.sectionItem != null &&
-                                    group.sectionKey !== ORPHAN_SECTION_KEY;
-                                const sectionDeleteAct =
-                                    canDeleteThisSection && group.sectionItem != null
-                                        ? onSectionDelete!.get(group.sectionItem)
+                                    const attrEv = group.sectionItem
+                                        ? sectionNameAttribute?.get(group.sectionItem)
                                         : undefined;
+                                    const raw =
+                                        attrEv && attrEv.status === ValueStatus.Available && attrEv.value != null
+                                            ? String(attrEv.value)
+                                            : "";
 
-                                if (editing && group.sectionItem) {
+                                    const beginEditPointer = (e: ReactPointerEvent): void => {
+                                        if (!editable || group.sectionItem == null) {
+                                            return;
+                                        }
+                                        if (e.pointerType === "mouse" && e.button !== 0) {
+                                            return;
+                                        }
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        handleBeginSectionInlineEdit(group.sectionItem, raw);
+                                        window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
+                                    };
+
+                                    const onInputKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+                                        if (!group.sectionItem) {
+                                            return;
+                                        }
+                                        if (e.key === "Enter") {
+                                            e.preventDefault();
+                                            skipSectionBlurCommitRef.current = true;
+                                            handleSectionTitleCommit(group.sectionItem, inlineSectionEditDraft);
+                                            window.requestAnimationFrame(() => {
+                                                skipSectionBlurCommitRef.current = false;
+                                            });
+                                        } else if (e.key === "Escape") {
+                                            e.preventDefault();
+                                            skipSectionBlurCommitRef.current = true;
+                                            handleSectionTitleCancel();
+                                            window.requestAnimationFrame(() => {
+                                                skipSectionBlurCommitRef.current = false;
+                                            });
+                                        }
+                                    };
+
+                                    const onInputBlur = (): void => {
+                                        if (skipSectionBlurCommitRef.current || suppressInputBlurCommitRef.current) {
+                                            return;
+                                        }
+                                        if (group.sectionItem) {
+                                            handleSectionTitleCommit(group.sectionItem, inlineSectionEditDraft);
+                                        }
+                                    };
+
+                                    const canDeleteThisSection =
+                                        canDeleteSection &&
+                                        group.sectionItem != null &&
+                                        group.sectionKey !== ORPHAN_SECTION_KEY;
+                                    const sectionDeleteAct =
+                                        canDeleteThisSection && group.sectionItem != null
+                                            ? onSectionDelete!.get(group.sectionItem)
+                                            : undefined;
+
+                                    if (editing && group.sectionItem) {
+                                        return (
+                                            <div className="widget-custom-dnd-tasklist__section-header">
+                                                <div
+                                                    id={titleId}
+                                                    className="widget-custom-dnd-tasklist__section-title-wrap"
+                                                    aria-label="セクション名"
+                                                >
+                                                    <label
+                                                        htmlFor={inputId}
+                                                        className="widget-custom-dnd-tasklist__visually-hidden"
+                                                    >
+                                                        セクション名
+                                                    </label>
+                                                    <input
+                                                        ref={sectionTitleInputRef}
+                                                        id={inputId}
+                                                        type="text"
+                                                        className="widget-custom-dnd-tasklist__inline-edit-input widget-custom-dnd-tasklist__section-title-input"
+                                                        value={inlineSectionEditDraft}
+                                                        onChange={e => setInlineSectionEditDraft(e.target.value)}
+                                                        onPointerDown={e => e.stopPropagation()}
+                                                        onBlur={onInputBlur}
+                                                        onKeyDown={onInputKeyDown}
+                                                        autoComplete="off"
+                                                    />
+                                                </div>
+                                                {canDeleteThisSection && sectionDeleteAct ? (
+                                                    <button
+                                                        type="button"
+                                                        className="widget-custom-dnd-tasklist__icon-btn widget-custom-dnd-tasklist__icon-btn--danger"
+                                                        aria-label={`${group.sectionTitle} を削除`}
+                                                        title="セクションを削除"
+                                                        disabled={
+                                                            !sectionDeleteAct.canExecute || sectionDeleteAct.isExecuting
+                                                        }
+                                                        onPointerDown={e => e.stopPropagation()}
+                                                        onClick={e => {
+                                                            e.stopPropagation();
+                                                            runListAction(onSectionDelete, group.sectionItem!);
+                                                        }}
+                                                    >
+                                                        <DeleteIcon />
+                                                    </button>
+                                                ) : null}
+                                            </div>
+                                        );
+                                    }
+
                                     return (
                                         <div className="widget-custom-dnd-tasklist__section-header">
-                                            <div
+                                            <h3
+                                                className={classNames("widget-custom-dnd-tasklist__section-title", {
+                                                    "widget-custom-dnd-tasklist__section-title--editable": editable
+                                                })}
                                                 id={titleId}
-                                                className="widget-custom-dnd-tasklist__section-title-wrap"
-                                                aria-label="セクション名"
+                                                role={editable ? "button" : undefined}
+                                                tabIndex={editable ? 0 : undefined}
+                                                onPointerDown={beginEditPointer}
+                                                onKeyDown={e => {
+                                                    if (!editable || group.sectionItem == null) {
+                                                        return;
+                                                    }
+                                                    if (e.key === "Enter" || e.key === " ") {
+                                                        e.preventDefault();
+                                                        handleBeginSectionInlineEdit(group.sectionItem, raw);
+                                                        window.setTimeout(
+                                                            () => sectionTitleInputRef.current?.focus(),
+                                                            0
+                                                        );
+                                                    }
+                                                }}
                                             >
-                                                <label
-                                                    htmlFor={inputId}
-                                                    className="widget-custom-dnd-tasklist__visually-hidden"
-                                                >
-                                                    セクション名
-                                                </label>
-                                                <input
-                                                    ref={sectionTitleInputRef}
-                                                    id={inputId}
-                                                    type="text"
-                                                    className="widget-custom-dnd-tasklist__inline-edit-input widget-custom-dnd-tasklist__section-title-input"
-                                                    value={inlineSectionEditDraft}
-                                                    onChange={e => setInlineSectionEditDraft(e.target.value)}
-                                                    onPointerDown={e => e.stopPropagation()}
-                                                    onBlur={onInputBlur}
-                                                    onKeyDown={onInputKeyDown}
-                                                    autoComplete="off"
-                                                />
-                                            </div>
+                                                {group.sectionTitle}
+                                            </h3>
                                             {canDeleteThisSection && sectionDeleteAct ? (
                                                 <button
                                                     type="button"
                                                     className="widget-custom-dnd-tasklist__icon-btn widget-custom-dnd-tasklist__icon-btn--danger"
                                                     aria-label={`${group.sectionTitle} を削除`}
                                                     title="セクションを削除"
-                                                    disabled={!sectionDeleteAct.canExecute || sectionDeleteAct.isExecuting}
+                                                    disabled={
+                                                        !sectionDeleteAct.canExecute || sectionDeleteAct.isExecuting
+                                                    }
                                                     onPointerDown={e => e.stopPropagation()}
                                                     onClick={e => {
                                                         e.stopPropagation();
@@ -1140,83 +1180,44 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                                             ) : null}
                                         </div>
                                     );
-                                }
-
-                                return (
-                                    <div className="widget-custom-dnd-tasklist__section-header">
-                                        <h3
-                                            className={classNames("widget-custom-dnd-tasklist__section-title", {
-                                                "widget-custom-dnd-tasklist__section-title--editable": editable
-                                            })}
-                                            id={titleId}
-                                            role={editable ? "button" : undefined}
-                                            tabIndex={editable ? 0 : undefined}
-                                            onPointerDown={beginEditPointer}
-                                            onKeyDown={e => {
-                                                if (!editable || group.sectionItem == null) {
-                                                    return;
-                                                }
-                                                if (e.key === "Enter" || e.key === " ") {
-                                                    e.preventDefault();
-                                                    handleBeginSectionInlineEdit(group.sectionItem, raw);
-                                                    window.setTimeout(() => sectionTitleInputRef.current?.focus(), 0);
-                                                }
+                                })()}
+                                <ul
+                                    className="widget-custom-dnd-tasklist__list widget-custom-dnd-tasklist__list--nested"
+                                    onDragOver={onDragOverRow}
+                                >
+                                    {group.tasks.map((item, index) =>
+                                        renderTaskRow(
+                                            item,
+                                            onDropOnRowGrouped(group.sectionKey, index),
+                                            canReorderGrouped
+                                        )
+                                    )}
+                                    {!checkMode &&
+                                    onInlineAddTask &&
+                                    group.sectionItem != null &&
+                                    group.sectionKey !== ORPHAN_SECTION_KEY ? (
+                                        <SectionInlineTaskAdd
+                                            widgetName={name}
+                                            sectionKey={group.sectionKey}
+                                            expanded={inlineAddSectionKey === group.sectionKey}
+                                            draft={inlineAddSectionKey === group.sectionKey ? inlineAddDraft : ""}
+                                            onDraftChange={setInlineAddDraft}
+                                            onExpand={() => {
+                                                setInlineAddSectionKey(group.sectionKey);
+                                                setInlineAddDraft("");
                                             }}
-                                        >
-                                            {group.sectionTitle}
-                                        </h3>
-                                        {canDeleteThisSection && sectionDeleteAct ? (
-                                            <button
-                                                type="button"
-                                                className="widget-custom-dnd-tasklist__icon-btn widget-custom-dnd-tasklist__icon-btn--danger"
-                                                aria-label={`${group.sectionTitle} を削除`}
-                                                title="セクションを削除"
-                                                disabled={!sectionDeleteAct.canExecute || sectionDeleteAct.isExecuting}
-                                                onPointerDown={e => e.stopPropagation()}
-                                                onClick={e => {
-                                                    e.stopPropagation();
-                                                    runListAction(onSectionDelete, group.sectionItem!);
-                                                }}
-                                            >
-                                                <DeleteIcon />
-                                            </button>
-                                        ) : null}
-                                    </div>
-                                );
-                            })()}
-                            <ul
-                                className="widget-custom-dnd-tasklist__list widget-custom-dnd-tasklist__list--nested"
-                                onDragOver={onDragOverRow}
-                            >
-                                {group.tasks.map((item, index) =>
-                                    renderTaskRow(item, onDropOnRowGrouped(group.sectionKey, index), canReorderGrouped)
-                                )}
-                                {!checkMode &&
-                                onInlineAddTask &&
-                                group.sectionItem != null &&
-                                group.sectionKey !== ORPHAN_SECTION_KEY ? (
-                                    <SectionInlineTaskAdd
-                                        widgetName={name}
-                                        sectionKey={group.sectionKey}
-                                        expanded={inlineAddSectionKey === group.sectionKey}
-                                        draft={inlineAddSectionKey === group.sectionKey ? inlineAddDraft : ""}
-                                        onDraftChange={setInlineAddDraft}
-                                        onExpand={() => {
-                                            setInlineAddSectionKey(group.sectionKey);
-                                            setInlineAddDraft("");
-                                        }}
-                                        onCollapse={() => {
-                                            setInlineAddSectionKey(k => (k === group.sectionKey ? null : k));
-                                            setInlineAddDraft("");
-                                        }}
-                                        onCommit={trimmed => handleInlineAddCommit(group.sectionItem!, trimmed)}
-                                        busy={onInlineAddTask.get(group.sectionItem).isExecuting}
-                                        canTrigger={onInlineAddTask.get(group.sectionItem).canExecute}
-                                        parentBlurSuppressionRef={suppressInputBlurCommitRef}
-                                    />
-                                ) : null}
-                            </ul>
-                        </section>
+                                            onCollapse={() => {
+                                                setInlineAddSectionKey(k => (k === group.sectionKey ? null : k));
+                                                setInlineAddDraft("");
+                                            }}
+                                            onCommit={trimmed => handleInlineAddCommit(group.sectionItem!, trimmed)}
+                                            busy={onInlineAddTask.get(group.sectionItem).isExecuting}
+                                            canTrigger={onInlineAddTask.get(group.sectionItem).canExecute}
+                                            parentBlurSuppressionRef={suppressInputBlurCommitRef}
+                                        />
+                                    ) : null}
+                                </ul>
+                            </section>
                         ))}
                     </div>
                 )}
@@ -1273,36 +1274,15 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             })}
             data-widget={name}
         >
-            {displayItemsFlat.length > 0 &&
-            !checkMode &&
-            !sortOrderAttrsLoadingFlat &&
-            !sortOrderAttrsReadyFlat ? (
+            {displayItemsFlat.length > 0 && !checkMode && !sortOrderAttrsLoadingFlat && !sortOrderAttrsReadyFlat ? (
                 <p className="widget-custom-dnd-tasklist__hint">
                     SortOrder の値が一部の行で未取得です。ページを再表示するか、データソースの設定を確認してください。
                 </p>
             ) : null}
             {inlineEditHint}
             {checkMode ? (
-                <div className="widget-custom-dnd-tasklist__checklist-card">
-                    <div className="widget-custom-dnd-tasklist__checklist-head">
-                        <h2 className="widget-custom-dnd-tasklist__checklist-title">点検チェックリスト</h2>
-                        <span className="widget-custom-dnd-tasklist__checklist-badge">
-                            {checkModeProgress.checked} / {checkModeProgress.total}
-                        </span>
-                    </div>
-                    <table className="widget-custom-dnd-tasklist__checklist-table">
-                        <thead>
-                            <tr>
-                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
-                                    状態
-                                </th>
-                                <th className="widget-custom-dnd-tasklist__checklist-th" scope="col">
-                                    点検項目
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>{displayItemsFlat.map(item => renderCheckModeTableRow(item))}</tbody>
-                    </table>
+                <div className="widget-custom-dnd-tasklist__checklist">
+                    {displayItemsFlat.map(item => renderCheckModeTableRow(item))}
                 </div>
             ) : (
                 <ul className="widget-custom-dnd-tasklist__list" onDragOver={onDragOverRow}>
