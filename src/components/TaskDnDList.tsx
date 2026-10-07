@@ -25,8 +25,8 @@ function CheckModeChevronIcon(): ReactElement {
     return (
         <svg
             className="widget-custom-dnd-tasklist__checklist-chevron-icon"
-            width="22"
-            height="22"
+            width="18"
+            height="18"
             viewBox="0 0 24 24"
             aria-hidden
             focusable="false"

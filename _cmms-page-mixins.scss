@@ -1,0 +1,899 @@
+// =============================================================================
+// CMMS Page Mixins — buttons, badges, tabs, grids, layout
+// Requires: _cmms-page-tokens.scss (imported before this file)
+// =============================================================================
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+
+@mixin pds-btn-base {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 7px 16px;
+    font-size: $pds-font-size-sm;
+    font-weight: $pds-font-weight-semibold;
+    line-height: 1.2;
+    box-shadow: none;
+    transition:
+        background $pds-transition,
+        border-color $pds-transition,
+        color $pds-transition,
+        transform $pds-transition,
+        box-shadow $pds-transition;
+
+    .glyphicon,
+    .mx-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: inherit !important;
+        font-size: $pds-font-size-xs;
+        line-height: 1;
+    }
+
+    .glyphicon-plus {
+        // グリフの視覚重心が上寄りなのでテキストと揃える
+        position: relative;
+        top: 1px;
+    }
+}
+
+@mixin pds-btn-primary {
+    @include pds-btn-base;
+    border: none !important;
+    border-radius: $pds-radius-sm !important;
+    background: $pds-brand !important;
+    color: $pds-surface !important;
+
+    &:hover,
+    &:focus {
+        background: $pds-brand-hover !important;
+        border-color: $pds-brand-hover !important;
+        color: $pds-surface !important;
+    }
+
+    &:active {
+        background: darken($pds-brand, 8%) !important;
+    }
+}
+
+@mixin pds-btn-success {
+    @include pds-btn-base;
+    border: none !important;
+    border-radius: $pds-radius-sm !important;
+    background: $pds-success !important;
+    color: $pds-surface !important;
+
+    &:hover,
+    &:focus {
+        background: darken($pds-success, 6%) !important;
+        border-color: darken($pds-success, 6%) !important;
+        color: $pds-surface !important;
+    }
+
+    &:active {
+        background: darken($pds-success, 10%) !important;
+    }
+}
+
+@mixin pds-btn-primary-pill {
+    @include pds-btn-primary;
+    padding: 9px 18px !important;
+    border-radius: $pds-radius-pill !important;
+    background: linear-gradient(135deg, $pds-brand 0%, $pds-brand-gradient-end 100%) !important;
+    box-shadow: $pds-shadow-btn !important;
+    letter-spacing: 0.01em;
+
+    &:hover,
+    &:focus {
+        transform: translateY(-1px);
+        box-shadow: $pds-shadow-btn-hover !important;
+        background: linear-gradient(135deg, $pds-brand 0%, $pds-brand-gradient-end 100%) !important;
+        color: $pds-surface !important;
+    }
+
+    &:active {
+        transform: translateY(0);
+    }
+}
+
+@mixin pds-btn-secondary {
+    @include pds-btn-base;
+    border: 1px solid $pds-brand !important;
+    border-radius: $pds-radius-sm !important;
+    background: $pds-surface !important;
+    color: $pds-brand !important;
+
+    &:hover,
+    &:focus {
+        background: $pds-brand-soft-hover !important;
+        border-color: $pds-brand !important;
+        color: $pds-brand !important;
+    }
+}
+
+@mixin pds-btn-secondary-pill {
+    @include pds-btn-secondary;
+    padding: 5px 12px !important;
+    border: 1px solid $pds-brand-border !important;
+    border-radius: $pds-radius-pill !important;
+    font-size: $pds-font-size-xs;
+
+    &:hover,
+    &:focus {
+        border-color: $pds-brand !important;
+        background: $pds-brand-soft !important;
+        color: $pds-brand-hover !important;
+        transform: translateY(-1px);
+    }
+}
+
+@mixin pds-btn-tertiary {
+    @include pds-btn-base;
+    border: 1px solid $pds-border-strong !important;
+    border-radius: $pds-radius-sm !important;
+    background: $pds-surface !important;
+    color: $pds-text !important;
+
+    &:hover,
+    &:focus {
+        background: $pds-hover !important;
+        border-color: $pds-border-strong !important;
+        color: $pds-text !important;
+    }
+}
+
+@mixin pds-btn-tertiary-pill {
+    @include pds-btn-tertiary;
+    padding: 6px 14px !important;
+    border: 1px solid $pds-border !important;
+    border-radius: $pds-radius-pill !important;
+    background: $pds-hover !important;
+    color: $pds-text !important;
+
+    .glyphicon {
+        color: $pds-brand;
+    }
+
+    &:hover,
+    &:focus {
+        border-color: rgba(38, 74, 229, 0.35) !important;
+        background: $pds-brand-soft !important;
+        color: $pds-brand !important;
+    }
+}
+
+@mixin pds-btn-icon {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 !important;
+    border: 1px solid $pds-border !important;
+    border-radius: $pds-radius-sm !important;
+    background: $pds-hover !important;
+    box-shadow: none !important;
+    color: $pds-muted !important;
+    transition: border-color $pds-transition, background $pds-transition, color $pds-transition;
+
+    .glyphicon,
+    .mx-icon {
+        color: inherit !important;
+    }
+
+    &:hover,
+    &:focus {
+        border-color: $pds-brand !important;
+        background: $pds-brand-soft !important;
+        color: $pds-brand !important;
+    }
+}
+
+// ── Badges & pills ───────────────────────────────────────────────────────────
+
+@mixin pds-status-pill($color, $bg) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 4px 12px !important;
+    border: 1px solid rgba($color, 0.18) !important;
+    border-radius: $pds-radius-pill !important;
+    background: $bg !important;
+    color: $color !important;
+    font-size: $pds-font-size-xxs;
+    font-weight: $pds-font-weight-bold;
+    line-height: 1.4;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+    transition: transform $pds-transition, box-shadow $pds-transition;
+
+    &:hover,
+    &:focus {
+        color: $color !important;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba($color, 0.12);
+    }
+}
+
+@mixin pds-badge-rect($color, $bg, $border: null) {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 10px;
+    border-radius: $pds-radius-sm;
+    background: $bg;
+    color: $color;
+    font-size: $pds-font-size-xs;
+    font-weight: $pds-font-weight-bold;
+    line-height: 1.4;
+
+    @if $border {
+        border: 1px solid $border;
+    } @else {
+        border: none;
+    }
+}
+
+@mixin pds-status-badge-circle($color, $bg, $size: 36px) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: $size;
+    height: $size;
+    border-radius: 50%;
+    background: $bg;
+    color: $color !important;
+    font-size: 18px;
+    line-height: 1;
+    transition: transform $pds-transition;
+
+    .glyphicon,
+    .mx-icon {
+        color: inherit !important;
+    }
+}
+
+// ── Cards & surfaces ─────────────────────────────────────────────────────────
+
+@mixin pds-card-surface {
+    overflow: hidden;
+    background: $pds-surface;
+    border: 1px solid $pds-border;
+    border-radius: $pds-radius-lg;
+    box-shadow: $pds-shadow;
+}
+
+@mixin pds-info-box {
+    margin-top: 14px;
+    padding: 12px 16px;
+    border: 1px solid $pds-info-border;
+    border-radius: $pds-radius-md;
+    background: $pds-info-bg;
+    color: $pds-text;
+    font-size: $pds-font-size-sm;
+    line-height: 1.55;
+
+    &-title {
+        display: block;
+        margin-bottom: 4px;
+        color: $pds-info-title;
+        font-weight: $pds-font-weight-bold;
+    }
+}
+
+// ── Form inputs ────────────────────────────────────────────────────────────────
+
+@mixin pds-form-control {
+    border-color: $pds-border-strong;
+    border-radius: $pds-radius-sm;
+    color: $pds-text;
+    background-color: $pds-surface;
+    box-shadow: none;
+
+    &:focus {
+        border-color: $pds-focus-border;
+        box-shadow: $pds-focus-ring-sm;
+        outline: none;
+    }
+}
+
+// ── Tabs ─────────────────────────────────────────────────────────────────────
+
+@mixin pds-tabs-underline {
+    // Atlas `.tab-lined.mx-tabcontainer > .mx-tabcontainer-tabs li > a` は
+    // padding: 16px 0・li に margin-right: 24px を持ち、`.nav-tabs > li > a` より
+    // 特異性が高い。tab-lined 経路を明示して HOME タスクタブと同系の下線タブにする。
+    .nav-tabs,
+    &.nav-tabs,
+    ul.mx-tabcontainer-tabs,
+    .tab-lined.mx-tabcontainer > .mx-tabcontainer-tabs,
+    .mx-tabcontainer.tab-lined > .mx-tabcontainer-tabs {
+        display: flex;
+        flex-wrap: nowrap;
+        margin: 0;
+        padding: 0 12px;
+        border: none;
+        border-bottom: 1px solid $pds-border;
+        background-color: $pds-hover;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+
+        > li {
+            flex: 0 0 auto;
+            margin: 0;
+
+            > a {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin: 0;
+                padding: 10px 12px;
+                border: none !important;
+                border-bottom: 2px solid transparent !important;
+                border-radius: 0;
+                background: transparent !important;
+                color: $pds-muted;
+                font-size: $pds-font-size-sm;
+                font-weight: $pds-font-weight-semibold;
+                line-height: 1.3;
+                white-space: nowrap;
+                transition: color $pds-transition, border-color $pds-transition;
+
+                &:hover,
+                &:focus {
+                    color: $pds-brand;
+                    border-bottom-color: lighten($pds-brand, 25%) !important;
+                }
+            }
+
+            &.active > a,
+            &.active > a:hover,
+            &.active > a:focus {
+                color: $pds-brand;
+                background: transparent !important;
+                border-bottom-color: $pds-brand !important;
+            }
+        }
+    }
+
+    .mx-tabcontainer-badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        align-self: center;
+        min-width: 18px;
+        height: 18px;
+        margin: 0 !important;
+        padding: 0 5px !important;
+        border-radius: $pds-radius-pill;
+        background: $pds-brand;
+        color: $pds-surface !important;
+        font-size: 10px;
+        font-weight: $pds-font-weight-bold;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
+    .tab-content {
+        padding-top: 16px;
+    }
+
+    .mx-tabcontainer-content {
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .tab-pane,
+    .mx-tabcontainer-pane {
+        min-height: 0;
+    }
+}
+
+@mixin pds-tabs-card {
+    .mx-tabcontainer-tabs {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0;
+        margin: 0;
+        padding: 0 12px;
+        border: none;
+        border-bottom: 1px solid $pds-border;
+        background: $pds-bg;
+
+        > li {
+            margin: 0;
+
+            > a {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                margin-bottom: -1px;
+                padding: 10px 18px;
+                border: 1px solid transparent;
+                border-bottom: none;
+                border-radius: $pds-radius-sm $pds-radius-sm 0 0;
+                background: transparent;
+                color: $pds-muted;
+                font-size: $pds-font-size-sm;
+                font-weight: $pds-font-weight-semibold;
+                line-height: 1.2;
+                white-space: nowrap;
+                transition: color $pds-transition, background $pds-transition, border-color $pds-transition;
+
+                &:hover,
+                &:focus {
+                    color: $pds-brand;
+                    background: $pds-brand-soft;
+                }
+            }
+
+            &.active > a {
+                border: 1px solid $pds-border;
+                border-top: 2px solid $pds-brand;
+                border-bottom: 1px solid $pds-surface;
+                padding-top: 9px;
+                background: $pds-surface;
+                color: $pds-brand;
+                box-shadow: none;
+            }
+        }
+    }
+
+    .mx-tabcontainer-badge {
+        display: inline-flex !important;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        align-self: center;
+        min-width: 18px;
+        height: 18px;
+        margin: 0 !important;
+        padding: 0 5px !important;
+        border-radius: $pds-radius-pill;
+        background: $pds-brand;
+        color: $pds-surface !important;
+        font-size: 10px;
+        font-weight: $pds-font-weight-bold;
+        line-height: 1;
+        vertical-align: middle;
+    }
+
+    .mx-tabcontainer-content {
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .mx-tabcontainer-pane {
+        padding: 16px 16px 20px;
+        border: none;
+        background: transparent;
+
+        &:not(.active) {
+            display: none !important;
+        }
+    }
+}
+
+// ── DataGrid 2 ───────────────────────────────────────────────────────────────
+
+@mixin pds-dg2-datagrid($header-uppercase: true) {
+    .widget-datagrid {
+        border: none;
+        background: transparent;
+    }
+
+    .widget-datagrid-grid.table {
+        display: grid !important;
+    }
+
+    .widget-datagrid-grid-head,
+    .widget-datagrid-grid-body,
+    .widget-datagrid-grid-head .tr,
+    .widget-datagrid-grid-body .tr {
+        display: contents;
+    }
+
+    .widget-datagrid-content {
+        border: 1px solid $pds-border;
+        border-radius: $pds-radius-sm;
+        overflow: hidden;
+        background: $pds-surface;
+    }
+
+    .widget-datagrid-grid {
+        border: none;
+    }
+
+    .widget-datagrid-grid-head .th {
+        padding: 10px 14px;
+        border: none;
+        border-bottom: 1px solid $pds-border-strong;
+        background: $pds-bg;
+        color: $pds-text;
+        font-size: $pds-font-size-xxs;
+        font-weight: $pds-font-weight-bold;
+        letter-spacing: if($header-uppercase, 0.04em, normal);
+        text-transform: if($header-uppercase, uppercase, none);
+
+        button {
+            color: inherit;
+            font-weight: inherit;
+        }
+
+        .column-header {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+
+            svg {
+                width: 10px;
+                height: 10px;
+                flex-shrink: 0;
+                opacity: 0.5;
+            }
+        }
+    }
+
+    .widget-datagrid-grid-body {
+        .td {
+            padding: 12px 14px;
+            border-color: $pds-border !important;
+            color: $pds-text;
+            font-size: $pds-font-size-sm;
+            vertical-align: middle;
+            transition: background $pds-transition;
+        }
+
+        .tr:hover .td {
+            background: $pds-hover;
+        }
+
+        // DG2 selected — soft fill only (no text recolor / no badge)
+        .tr.selected .td,
+        .tr.tr-selected .td,
+        .tr[aria-selected="true"] .td {
+            background: $pds-brand-soft !important;
+        }
+
+        .td-text {
+            color: $pds-text;
+            font-weight: 500;
+        }
+
+        .td-custom-content {
+            padding-top: 6px;
+            padding-bottom: 6px;
+        }
+    }
+
+    .widget-datagrid-footer,
+    .widget-datagrid-footer.table-footer {
+        margin-top: 12px;
+        padding: 0;
+        border: none;
+        background: transparent;
+    }
+
+    .widget-datagrid-paging-bottom,
+    .pagination-bar {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 4px;
+
+        button,
+        .pagination-button {
+            min-width: 28px;
+            height: 28px;
+            padding: 0 6px;
+            border: 1px solid $pds-border;
+            border-radius: $pds-radius-sm;
+            background: $pds-surface;
+            color: $pds-muted;
+            transition: border-color $pds-transition, color $pds-transition, background $pds-transition;
+
+            &:hover:not(:disabled),
+            &:focus:not(:disabled) {
+                border-color: $pds-brand;
+                background: $pds-brand-soft;
+                color: $pds-brand;
+            }
+
+            &:disabled {
+                opacity: 0.4;
+            }
+        }
+
+        .paging-status {
+            padding: 0 10px;
+            color: $pds-muted;
+            font-size: $pds-font-size-xs;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+    }
+}
+
+// ── Page layout grid (A / B / C rows) ───────────────────────────────────────
+
+@mixin pds-page-layout-grid($page-selector) {
+    .css-grid-container:has(#{$page-selector}) {
+        > .A {
+            padding: $pds-page-header-pad-y $pds-page-gutter;
+            border: none !important;
+            border-bottom: 1px solid $pds-border !important;
+            background: $pds-surface;
+
+            .mx-text {
+                margin: 0;
+                color: $pds-text;
+                font-size: 18px;
+                font-weight: $pds-font-weight-bold;
+                line-height: 1.3;
+                letter-spacing: 0.01em;
+            }
+        }
+
+        > .B {
+            padding: 8px $pds-page-gutter !important;
+            border: none !important;
+            border-bottom: 1px solid $pds-border !important;
+            background: $pds-surface;
+
+            .flex-space-between {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 12px;
+            }
+
+            .row-left,
+            .row-center,
+            .row-right {
+                display: flex;
+                align-items: center;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+        }
+
+        > .C {
+            padding: $pds-page-gutter !important;
+            background: $pds-surface;
+        }
+
+        @media (max-width: 991px) {
+            > .A,
+            > .B {
+                padding-left: 12px !important;
+                padding-right: 12px !important;
+            }
+
+            > .C {
+                padding: 12px !important;
+            }
+        }
+    }
+}
+
+@mixin pds-panel-header($bg: linear-gradient(135deg, $pds-brand 0%, $pds-brand-gradient-end 100%)) {
+    display: block;
+    margin: 0 0 10px;
+    padding: 8px 12px;
+    border-radius: $pds-radius-sm;
+    background: $bg;
+    color: $pds-surface;
+    font-size: $pds-font-size-xs;
+    font-weight: $pds-font-weight-bold;
+    letter-spacing: 0.06em;
+    text-align: center;
+    text-transform: uppercase;
+}
+
+@mixin pds-snippet-base {
+    color: $pds-text;
+    font-size: $pds-font-size-body;
+    line-height: 1.5;
+
+    *,
+    *::before,
+    *::after {
+        box-sizing: border-box;
+    }
+}
+
+// Asset Manager 設定 — センサー選択 / アラームタイプ等の KV 行
+@mixin asset-manager-configration-kv-row {
+    $kv-label-width: 7.5em; // 日本語ラベル幅（固定pxより縮みにくい）
+
+    .form-group {
+        display: grid;
+        grid-template-columns: $kv-label-width minmax(0, 1fr);
+        align-items: center;
+        // row-gap は付けない（下記 ::before/::after が空行になり上下に 12px 空きが出る）
+        column-gap: 12px;
+        row-gap: 0;
+        gap: 0 12px;
+        margin: 0;
+
+        // Atlas/Bootstrap clearfix 擬似要素が grid アイテム化して空行になるのを防ぐ
+        &::before,
+        &::after {
+            content: none !important;
+            display: none !important;
+        }
+    }
+
+    .control-label {
+        grid-column: 1;
+        width: auto;
+        max-width: none;
+        margin: 0;
+        padding: 0 !important;
+        color: $pds-muted;
+        font-size: $pds-font-size-xs;
+        font-weight: $pds-font-weight-bold;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        text-align: left;
+        white-space: nowrap;
+        float: none;
+    }
+
+    .col-sm-9,
+    .form-group > [class*="col-"]:not(.control-label) {
+        grid-column: 2;
+        width: 100% !important;
+        max-width: none !important;
+        min-width: 0;
+        padding: 0 !important;
+        float: none;
+    }
+
+    .widget-combobox {
+        width: 100%;
+    }
+
+    .widget-combobox-input-container,
+    .widget-combobox-input-container.form-control,
+    .widget-combobox-input-container-disabled:not(.form-control-static) {
+        position: relative;
+        overflow: hidden;
+    }
+
+    // 編集可能な ComboBox / 入力コントロール
+    .form-control,
+    .widget-combobox-input-container,
+    .widget-combobox-input-container.form-control,
+    .widget-combobox-input-container-disabled:not(.form-control-static) {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        max-height: 40px !important;
+        margin: 0 !important;
+        padding: 8px 14px !important;
+        border: 1px solid $pds-border-strong !important;
+        border-radius: $pds-radius-md !important;
+        background: $pds-surface !important;
+        color: $pds-title !important;
+        font-size: $pds-font-size-sm !important;
+        font-weight: $pds-font-weight-semibold !important;
+        line-height: 1.45 !important;
+        text-align: left !important;
+        box-shadow: none !important;
+
+        &:focus {
+            border-color: $pds-focus-border !important;
+            box-shadow: $pds-focus-ring !important;
+        }
+    }
+
+    // Read-only style = Content only（枠・背景を付けない）
+    .form-control-static,
+    .widget-combobox-input-container.form-control-static,
+    .widget-combobox-input-container-disabled.form-control-static {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        max-width: none !important;
+        height: auto !important;
+        min-height: 0 !important;
+        max-height: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        color: $pds-title !important;
+        font-size: $pds-font-size-sm !important;
+        font-weight: $pds-font-weight-semibold !important;
+        line-height: 1.45 !important;
+        text-align: left !important;
+        overflow: visible !important;
+
+        &:focus {
+            border: none !important;
+            box-shadow: none !important;
+            outline: none !important;
+        }
+    }
+
+    .widget-combobox-selected-items {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        height: 100% !important;
+        overflow: hidden !important;
+    }
+
+    .widget-combobox-input {
+        position: absolute !important;
+        width: 1px !important;
+        height: 1px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 0 !important;
+        opacity: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none !important;
+    }
+
+    .widget-combobox-placeholder-text {
+        display: inline !important;
+        position: static !important;
+        inset: auto !important;
+        width: auto !important;
+        max-width: 100% !important;
+        min-height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        background: transparent !important;
+        color: inherit !important;
+        font-size: inherit !important;
+        font-weight: inherit !important;
+        line-height: inherit !important;
+        text-align: left !important;
+        white-space: nowrap !important;
+        pointer-events: auto !important;
+    }
+
+    .widget-combobox-down-arrow,
+    .widget-combobox-clear-button {
+        display: none;
+    }
+}
+
+@mixin asset-manager-configration-section-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0;
+    color: $pds-title;
+    font-size: $pds-font-size-xs;
+    font-weight: $pds-font-weight-bold;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    line-height: 1.3;
+
+    &::before {
+        content: "";
+        flex-shrink: 0;
+        width: 4px;
+        height: 14px;
+        border-radius: 2px;
+        background: linear-gradient(180deg, $pds-brand 0%, $pds-brand-gradient-end 100%);
+    }
+}

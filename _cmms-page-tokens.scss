@@ -1,0 +1,66 @@
+// =============================================================================
+// CMMS Page Design Tokens — shared across _*-page.scss files
+// Source of truth: custom-variables.scss ($brand-primary, $font-color-default)
+// =============================================================================
+
+$pds-text: $font-color-default; // #0a1325
+$pds-title: #0f172a;
+$pds-muted: #64748b;
+$pds-border: #e2e8f0;
+$pds-border-strong: #cbd5e1;
+$pds-surface: #ffffff; // ページ / ポップアップ / カードの基本背景
+$pds-bg: #f5f7fb; // 既定では使わない（薄色キャンバスは読みにくい）
+$pds-hover: #f8fafc; // 行 hover のみ。ページ塗りには使わない
+$pds-brand: $brand-primary; // #264ae5
+$pds-brand-hover: #1a35b8;
+$pds-brand-soft: #eef2ff;
+$pds-brand-soft-hover: #f3f6ff;
+$pds-brand-border: rgba(38, 74, 229, 0.22);
+$pds-brand-gradient-end: #3b5bdb;
+$pds-focus-border: rgba(38, 74, 229, 0.45);
+$pds-focus-ring: 0 0 0 3px rgba(38, 74, 229, 0.12);
+$pds-focus-ring-sm: 0 0 0 2px rgba(38, 74, 229, 0.12);
+
+$pds-success: #16a34a;
+$pds-success-soft: #ecfdf5;
+$pds-warning: #f59e0b;
+$pds-warning-soft: #fffbeb;
+$pds-danger: #dc2626;
+$pds-danger-soft: #fef2f2;
+$pds-draft: #64748b;
+$pds-draft-soft: #f1f5f9;
+
+// Empty-field highlight — soft is default; harsh yellow is absolute-required only
+$pds-empty-field: #fff9c4;
+$pds-empty-field-border: #f6e05e;
+$pds-empty-field-required: #ffff00;
+$pds-empty-field-required-border: $pds-danger;
+
+$pds-info-border: #aac8f8;
+$pds-info-bg: #eff6ff;
+$pds-info-title: #1d4ed8;
+$pds-badge-bg: #eaf1ff;
+$pds-badge-border: #d7e5ff;
+
+$pds-radius-sm: 6px;
+$pds-radius-md: 8px;
+$pds-radius-lg: 10px;
+$pds-radius-pill: 999px;
+
+$pds-shadow: 0 1px 3px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
+$pds-shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.08), 0 12px 28px rgba(15, 23, 42, 0.08);
+$pds-shadow-btn: 0 2px 8px rgba(38, 74, 229, 0.28);
+$pds-shadow-btn-hover: 0 4px 14px rgba(38, 74, 229, 0.38);
+
+$pds-transition: 0.2s ease;
+$pds-page-gutter: 20px;
+$pds-page-header-pad-y: 7px;
+$pds-detail-max-width: 1040px;
+
+$pds-font-size-body: 14px;
+$pds-font-size-sm: 13px;
+$pds-font-size-xs: 12px;
+$pds-font-size-xxs: 11px;
+$pds-font-weight-normal: 400;
+$pds-font-weight-semibold: 600;
+$pds-font-weight-bold: 700;
