@@ -164,12 +164,12 @@
 
 .widget-custom-dnd-tasklist__checklist-item {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
     box-sizing: border-box;
     min-height: 0;
     margin: 0;
-    padding: 1px 0 1px 6px;
+    padding: 0;
     border: 1px solid #e6e8ee;
     border-radius: 6px;
     background: #fff;
@@ -181,6 +181,20 @@
 
 .widget-custom-dnd-tasklist__checklist-item--checked {
     background: #fff;
+}
+
+.widget-custom-dnd-tasklist__checklist-item-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 30px;
+    padding: 1px 0 1px 6px;
+}
+
+.widget-custom-dnd-tasklist__checklist-item-content {
+    margin: 0 10px 10px 30px;
+    padding-top: 9px;
+    border-top: 1px solid #e8ecf2;
 }
 
 .widget-custom-dnd-tasklist__checklist-item-text {

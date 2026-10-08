@@ -179,6 +179,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         descriptionMaxLines,
         checkMode,
         taskCheckedAttribute,
+        checkModeTaskContent,
         onTaskDetail,
         onTaskDelete,
         onSectionDelete,
@@ -773,6 +774,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                 checkedEv && checkedEv.status === ValueStatus.Available && checkedEv.value != null
                     ? Boolean(checkedEv.value)
                     : false;
+            const supplementalContent = checkModeTaskContent?.get(item);
 
             const act = onTaskCheckedCommitted?.get(item);
             const canToggle =
@@ -799,49 +801,62 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                         "widget-custom-dnd-tasklist__checklist-item--unchecked": !checked
                     })}
                 >
-                    <button
-                        type="button"
-                        className={classNames("widget-custom-dnd-tasklist__status-toggle", {
-                            "widget-custom-dnd-tasklist__status-toggle--checked": checked,
-                            "widget-custom-dnd-tasklist__status-toggle--unchecked": !checked
-                        })}
-                        disabled={!canToggle}
-                        onClick={onToggle}
-                        onPointerDown={e => e.stopPropagation()}
-                        aria-pressed={checked}
-                        aria-label={`${title} のチェックを切り替え`}
-                    >
-                        <span className="widget-custom-dnd-tasklist__status-toggle-mark" aria-hidden>
-                            {checked ? "✓" : ""}
-                        </span>
-                    </button>
-                    <span className="widget-custom-dnd-tasklist__checklist-item-text" title={title}>
-                        {title}
-                    </span>
-                    {onCheckModeChevron && chevronAct ? (
+                    <div className="widget-custom-dnd-tasklist__checklist-item-row">
                         <button
                             type="button"
-                            className="widget-custom-dnd-tasklist__checklist-chevron-btn"
-                            aria-label={`${title} の詳細`}
-                            title="開く"
-                            disabled={!chevronAct.canExecute || chevronAct.isExecuting}
+                            className={classNames("widget-custom-dnd-tasklist__status-toggle", {
+                                "widget-custom-dnd-tasklist__status-toggle--checked": checked,
+                                "widget-custom-dnd-tasklist__status-toggle--unchecked": !checked
+                            })}
+                            disabled={!canToggle}
+                            onClick={onToggle}
                             onPointerDown={e => e.stopPropagation()}
-                            onClick={e => {
-                                e.stopPropagation();
-                                runListAction(onCheckModeChevron, item);
-                            }}
+                            aria-pressed={checked}
+                            aria-label={`${title} のチェックを切り替え`}
                         >
-                            <CheckModeChevronIcon />
+                            <span className="widget-custom-dnd-tasklist__status-toggle-mark" aria-hidden>
+                                {checked ? "✓" : ""}
+                            </span>
                         </button>
-                    ) : (
-                        <span className="widget-custom-dnd-tasklist__checklist-chevron" aria-hidden>
-                            <CheckModeChevronIcon />
+                        <span className="widget-custom-dnd-tasklist__checklist-item-text" title={title}>
+                            {title}
                         </span>
-                    )}
+                        {onCheckModeChevron && chevronAct ? (
+                            <button
+                                type="button"
+                                className="widget-custom-dnd-tasklist__checklist-chevron-btn"
+                                aria-label={`${title} の詳細`}
+                                title="開く"
+                                disabled={!chevronAct.canExecute || chevronAct.isExecuting}
+                                onPointerDown={e => e.stopPropagation()}
+                                onClick={e => {
+                                    e.stopPropagation();
+                                    runListAction(onCheckModeChevron, item);
+                                }}
+                            >
+                                <CheckModeChevronIcon />
+                            </button>
+                        ) : (
+                            <span className="widget-custom-dnd-tasklist__checklist-chevron" aria-hidden>
+                                <CheckModeChevronIcon />
+                            </span>
+                        )}
+                    </div>
+                    {checked && supplementalContent != null ? (
+                        <div className="widget-custom-dnd-tasklist__checklist-item-content">{supplementalContent}</div>
+                    ) : null}
                 </div>
             );
         },
-        [commitCheckToggle, onCheckModeChevron, taskNameAttribute, widgetReadOnly]
+        [
+            checkModeTaskContent,
+            commitCheckToggle,
+            onCheckModeChevron,
+            onTaskCheckedCommitted,
+            taskCheckedAttribute,
+            taskNameAttribute,
+            widgetReadOnly
+        ]
     );
 
     const renderTaskRow = (
