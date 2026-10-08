@@ -70,9 +70,14 @@
                 <caption>チェックモード</caption>
                 <description>ON のとき、チェックボックス付きのコンパクト表示に切り替えます（インライン編集・インライン追加は無効）。</description>
             </property>
+            <property key="checkModeTaskContentCondition" type="expression" dataSource="tasks" required="false">
+                <caption>補助コンテンツ表示条件（Boolean）</caption>
+                <description>各タスクで評価する Boolean 式。式が True の行だけ、下の補助コンテンツを表示します。関連オブジェクトの属性も式で参照できます。</description>
+                <returnType type="Boolean" />
+            </property>
             <property key="checkModeTaskContent" type="widgets" dataSource="tasks" required="false">
-                <caption>チェック済み項目の補助コンテンツ</caption>
-                <description>チェックモードでチェック状態が True の項目の下に表示する任意のウィジェット。各ウィジェットはその項目のタスクオブジェクトをコンテキストとして描画されます。</description>
+                <caption>条件一致時の補助コンテンツ</caption>
+                <description>上の表示条件が True の項目の下に表示する任意のウィジェット。各ウィジェットはその項目のタスクオブジェクトをコンテキストとして描画されます。</description>
             </property>
         </propertyGroup>
         <propertyGroup caption="アクション（行・インライン）">

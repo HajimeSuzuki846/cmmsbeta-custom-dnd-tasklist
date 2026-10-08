@@ -4,15 +4,7 @@
  * @author Mendix Widgets Framework Team
  */
 import { ComponentType, CSSProperties, ReactNode } from "react";
-import {
-    ActionValue,
-    ListValue,
-    Option,
-    ListActionValue,
-    ListAttributeValue,
-    ListReferenceValue,
-    ListWidgetValue
-} from "mendix";
+import { ActionValue, ListValue, Option, ListActionValue, ListAttributeValue, ListExpressionValue, ListReferenceValue, ListWidgetValue } from "mendix";
 import { Big } from "big.js";
 
 export interface CustomDnDTaskListContainerProps {
@@ -30,6 +22,7 @@ export interface CustomDnDTaskListContainerProps {
     taskCheckedAttribute?: ListAttributeValue<boolean>;
     descriptionMaxLines: number;
     checkMode: boolean;
+    checkModeTaskContentCondition?: ListExpressionValue<boolean>;
     checkModeTaskContent?: ListWidgetValue;
     onTaskDetail?: ListActionValue;
     onTaskDelete?: ListActionValue;
@@ -66,6 +59,7 @@ export interface CustomDnDTaskListPreviewProps {
     taskCheckedAttribute: string;
     descriptionMaxLines: number | null;
     checkMode: boolean;
+    checkModeTaskContentCondition: string;
     checkModeTaskContent: { widgetCount: number; renderer: ComponentType<{ children: ReactNode; caption?: string }> };
     onTaskDetail: {} | null;
     onTaskDelete: {} | null;

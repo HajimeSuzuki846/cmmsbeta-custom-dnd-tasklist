@@ -179,6 +179,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         descriptionMaxLines,
         checkMode,
         taskCheckedAttribute,
+        checkModeTaskContentCondition,
         checkModeTaskContent,
         onTaskDetail,
         onTaskDelete,
@@ -775,6 +776,10 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                     ? Boolean(checkedEv.value)
                     : false;
             const supplementalContent = checkModeTaskContent?.get(item);
+            const supplementalContentCondition = checkModeTaskContentCondition?.get(item);
+            const showSupplementalContent =
+                supplementalContentCondition?.status === ValueStatus.Available &&
+                supplementalContentCondition.value === true;
 
             const act = onTaskCheckedCommitted?.get(item);
             const canToggle =
@@ -842,7 +847,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                             </span>
                         )}
                     </div>
-                    {checked && supplementalContent != null ? (
+                    {showSupplementalContent && supplementalContent != null ? (
                         <div className="widget-custom-dnd-tasklist__checklist-item-content">{supplementalContent}</div>
                     ) : null}
                 </div>
@@ -850,6 +855,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         },
         [
             checkModeTaskContent,
+            checkModeTaskContentCondition,
             commitCheckToggle,
             onCheckModeChevron,
             onTaskCheckedCommitted,
