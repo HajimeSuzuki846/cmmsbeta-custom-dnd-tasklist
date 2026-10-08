@@ -197,6 +197,10 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
 
     const widgetReadOnly = (props as { readOnly?: boolean }).readOnly;
 
+    /** チェック確定マイクロフロー完了前の再クリックを捨てる */
+    const checkToggleInFlightRef = useRef(new Set<string>());
+    /** 属性の再取得より先に、押した直後の ON/OFF を表示する */
+    const [optimisticCheckedById, setOptimisticCheckedById] = useState<Record<string, boolean>>({});
     const [draggingId, setDraggingId] = useState<string | undefined>();
     /** dragstart と drop の間で state が追いつかないケースを避ける */
     const draggingIdRef = useRef<string | undefined>(undefined);
@@ -734,30 +738,85 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
         [checkMode, taskGroups, draggingId, persistOrderInSection, canReorderGrouped]
     );
 
+    const clearOptimisticChecked = useCallback((itemId: string): void => {
+        setOptimisticCheckedById(prev => {
+            if (!(itemId in prev)) {
+                return prev;
+            }
+            const next = { ...prev };
+            delete next[itemId];
+            return next;
+        });
+    }, []);
+
     const commitCheckToggle = useCallback(
         (item: ObjectItem, next: boolean): void => {
+            if (checkToggleInFlightRef.current.has(item.id)) {
+                return;
+            }
             const act = onTaskCheckedCommitted?.get(item);
             const checkedEv = taskCheckedAttribute?.get(item);
+            setOptimisticCheckedById(prev => ({ ...prev, [item.id]: next }));
             if (act?.canExecute && !act.isExecuting) {
-                act.execute({ newChecked: next });
-                window.setTimeout(() => tasks.reload(), 0);
+                checkToggleInFlightRef.current.add(item.id);
+                const finish = (): void => {
+                    checkToggleInFlightRef.current.delete(item.id);
+                };
+                try {
+                    Promise.resolve(act.execute({ newChecked: next })).then(finish, () => {
+                        checkToggleInFlightRef.current.delete(item.id);
+                        clearOptimisticChecked(item.id);
+                    });
+                } catch (err) {
+                    checkToggleInFlightRef.current.delete(item.id);
+                    clearOptimisticChecked(item.id);
+                    console.warn("CustomDnDTaskList: onTaskCheckedCommitted failed to start.", err);
+                }
                 return;
             }
             if (!checkedEv || checkedEv.status !== ValueStatus.Available) {
+                clearOptimisticChecked(item.id);
                 return;
             }
             try {
                 checkedEv.setValue(next);
-                window.setTimeout(() => tasks.reload(), 0);
             } catch (err) {
+                clearOptimisticChecked(item.id);
                 console.warn(
                     "CustomDnDTaskList: taskCheckedAttribute setValue is not supported for this attribute; configure onTaskCheckedCommitted to persist.",
                     err
                 );
             }
         },
-        [onTaskCheckedCommitted, taskCheckedAttribute, tasks]
+        [clearOptimisticChecked, onTaskCheckedCommitted, taskCheckedAttribute]
     );
+
+    useEffect(() => {
+        if (!taskCheckedAttribute) {
+            return;
+        }
+        setOptimisticCheckedById(prev => {
+            const ids = Object.keys(prev);
+            if (ids.length === 0) {
+                return prev;
+            }
+            const items = tasks.items ?? [];
+            let changed = false;
+            const next = { ...prev };
+            for (const id of ids) {
+                const item = items.find(it => it.id === id);
+                if (!item) {
+                    continue;
+                }
+                const ev = taskCheckedAttribute.get(item);
+                if (ev.status === ValueStatus.Available && Boolean(ev.value) === prev[id]) {
+                    delete next[id];
+                    changed = true;
+                }
+            }
+            return changed ? next : prev;
+        });
+    }, [taskCheckedAttribute, tasks]);
 
     const renderCheckModeTableRow = useCallback(
         (item: ObjectItem): ReactElement => {
@@ -771,10 +830,11 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
                     : item.id;
 
             const checkedEv = taskCheckedAttribute?.get(item);
-            const checked =
+            const checkedFromAttribute =
                 checkedEv && checkedEv.status === ValueStatus.Available && checkedEv.value != null
                     ? Boolean(checkedEv.value)
                     : false;
+            const checked = item.id in optimisticCheckedById ? optimisticCheckedById[item.id] : checkedFromAttribute;
             const supplementalContent = checkModeTaskContent?.get(item);
             const supplementalContentCondition = checkModeTaskContentCondition?.get(item);
             const showSupplementalContent =
@@ -857,6 +917,7 @@ export function TaskDnDList(props: CustomDnDTaskListContainerProps): ReactElemen
             checkModeTaskContent,
             checkModeTaskContentCondition,
             commitCheckToggle,
+            optimisticCheckedById,
             onCheckModeChevron,
             onTaskCheckedCommitted,
             taskCheckedAttribute,
